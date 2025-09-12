@@ -1,0 +1,70 @@
+import { useState, useRef, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area'; // Assuming you have a scroll-area component
+import { Loader2 } from 'lucide-react';
+
+interface ChatbotProps {
+  onSendMessage: (message: string) => Promise<void>;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  isResponding: boolean;
+}
+
+export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotProps) {
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleSend = async () => {
+    if (input.trim()) {
+      await onSendMessage(input);
+      setInput('');
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [messages]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-grow p-2 border rounded-md mb-2">
+        {messages.map((msg, index) => (
+          <div key={index} className={`mb-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+            <span className={`inline-block p-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+              {msg.content}
+            </span>
+          </div>
+        ))}
+        {isResponding && (
+          <div className="text-left mb-1">
+            <span className="inline-block p-2 rounded-lg bg-gray-200 text-gray-800">
+              <Loader2 className="h-4 w-4 animate-spin inline-block mr-1" />
+              Thinking...
+            </span>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </ScrollArea>
+      <div className="flex">
+        <Input
+          type="text"
+          placeholder="Ask Willy Wonka..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSend();
+            }
+          }}
+          className="flex-grow mr-2"
+          disabled={isResponding}
+        />
+        <Button onClick={handleSend} disabled={isResponding}>
+          Send
+        </Button>
+      </div>
+    </div>
+  );
+}
