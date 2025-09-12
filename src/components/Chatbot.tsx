@@ -13,6 +13,7 @@ interface ChatbotProps {
 export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true); // Add a ref to track initial mount
 
   const handleSend = async () => {
     if (input.trim()) {
@@ -25,7 +26,13 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(scrollToBottom, [messages]);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false; // Set to false after first render
+      return; // Don't scroll on initial mount
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-full">

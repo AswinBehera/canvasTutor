@@ -19,7 +19,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ControlsPanel } from './components/ControlsPanel';
 import { ExportPanel } from './components/ExportPanel';
 import { ResizablePanel } from './components/ResizablePanel';
-import { FloatingHeader } from './components/FloatingHeader';
+
 
 function App() {
   const location = useLocation();
@@ -162,22 +162,23 @@ function App() {
         <Route path="/get-started" element={<InputPage />} />
         <Route path="/canvas" element={
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            <FloatingHeader appState={state} />
-            <div style={{ display: 'flex', flexGrow: 1, position: 'relative', paddingTop: '64px' }}>
-              {/* New Controls Panel (absolute positioning) */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 p-2 bg-white rounded-lg shadow-md border border-gray-200">
-                <ControlsPanel
-                  controls={state.controls}
-                  onControlChange={onControlChange}
-                  onPlaySimulation={onPlaySimulation}
-                  isSimulating={state.isSimulating}
-                  onToggleShowMath={onToggleShowMath}
-                  showMath={state.showMath}
-                />
-              </div>
+            
+            {/* Controls Panel (normal flow) */}
+            <div className="w-full py-1 px-2 flex items-center justify-center bg-white z-20">
+              <ControlsPanel
+                controls={state.controls}
+                onControlChange={onControlChange}
+                onPlaySimulation={onPlaySimulation}
+                isSimulating={state.isSimulating}
+                onToggleShowMath={onToggleShowMath}
+                showMath={state.showMath}
+              />
+            </div>
+            <div style={{ display: 'flex', flexGrow: 1, position: 'relative', height: '100%' }}>
+              
               {/* Chatbot Area */}
               <ResizablePanel initialWidth={300} minWidth={250} maxWidth={500} side="right" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                <div style={{ padding: '10px', overflowY: 'auto', flexGrow: 1 }}>
+                <div style={{ padding: '10px', overflowY: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                   <h3>Willy Wonka's Insights</h3>
                   <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
                   {state.narration && (
@@ -205,14 +206,16 @@ function App() {
         } />
       </Routes>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 text-center text-muted-foreground text-sm border-t border-gray-200 mt-20">
-        <p>&copy; {new Date().getFullYear()} CanvasTutor. All rights reserved.</p>
-        <div className="mt-4 space-x-4">
-          <a href="#" className="hover:text-primary">Privacy Policy</a>
-          <a href="#" className="hover:text-primary">Terms of Service</a>
-        </div>
-      </footer>
+      {/* Footer (only for non-canvas pages) */}
+      {location.pathname !== '/canvas' && (
+        <footer className="container mx-auto px-4 py-4 text-center text-muted-foreground text-sm border-t border-gray-200">
+          <p>&copy; {new Date().getFullYear()} CanvasTutor. All rights reserved.</p>
+          <div className="space-x-4">
+            <a href="#" className="hover:text-primary">Privacy Policy</a>
+            <a href="#" className="hover:text-primary">Terms of Service</a>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

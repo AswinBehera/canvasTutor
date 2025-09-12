@@ -32,7 +32,7 @@ export function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onConnect, 
 
   useEffect(() => {
     if (nodes.length > 0 || edges.length > 0) {
-      fitView();
+      fitView({ padding: 1.0, includeHiddenNodes: true, duration: 0 });
     }
   }, [nodes.length, edges.length, fitView]);
 
@@ -62,7 +62,7 @@ export function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onConnect, 
   );
 
   return (
-    <div style={{ height: '100vh' }} onDragOver={onDragOver} onDrop={onDrop}>
+    <div style={{ height: '100%' }} onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

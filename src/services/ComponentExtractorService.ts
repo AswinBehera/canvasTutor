@@ -7,6 +7,8 @@ export class ComponentExtractorService {
     const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
     const modelName = 'openai/gpt-oss-20b'; // OpenRouter specific model ID
 
+    console.log('Authorization Header:', `Bearer ${OPENROUTER_API_KEY}`);
+
     const prompt = `You are an AI assistant that helps design system architectures.
 Based on the following user description, suggest 3-8 core components for a software system (nodes) and logical connections between them (edges).
 For each component (node), provide an 'id' (unique string), 'label' (short name), 'description' (1-line friendly explanation), 'techOptions' (an array of two strings: [managed_service_option, diy_option]), 'category' (e.g., 'frontend', 'backend', 'database', 'auth', 'storage', 'other'), 'baseMetrics' (an object with responsiveness, cost, and reliability, each a number between 0-100), and 'scalingFactors' (an object with traffic and instances, each a number between 0-1).

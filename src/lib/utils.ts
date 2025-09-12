@@ -41,11 +41,12 @@ export const getLayoutedElements = (nodes: Node<CustomNodeData>[], edges: Edge[]
     const nodeWithPosition = g.node(node.id);
     node.position = {
       x: nodeWithPosition.x - nodeWidth / 2,
-      y: nodeWithPosition.y - nodeHeight / 2,
+      y: nodeWithPosition.y - nodeHeight / 2 - 100,
     };
 
     return node;
   });
+  console.log('Layouted Nodes Y positions:', layoutedNodes.map(node => node.position.y)); // Added console.log
 
   return { layoutedNodes, layoutedEdges: edges };
 };

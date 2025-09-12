@@ -6,6 +6,7 @@ interface ResizablePanelProps {
   minWidth?: number;
   maxWidth?: number;
   side?: 'left' | 'right'; // Side from which it resizes
+  style?: React.CSSProperties; // Added this line
 }
 
 export const ResizablePanel: React.FC<ResizablePanelProps> = ({
