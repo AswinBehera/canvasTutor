@@ -22,6 +22,7 @@ const SIMULATION_RULES: SimulationRules = {
 };
 
 export class SimulationService {
+
   calculateNodeMetrics(
     node: Node<CustomNodeData>,
     incomingTraffic: number,
@@ -100,20 +101,6 @@ export class SimulationService {
   animateDataFlow(edges: Edge[]): void {
     console.log('Animating data flow for edges:', edges);
     // TODO: Implement actual data flow animation
-  }
-
-  generateNarration(
-    previousState: SimulationState,
-    newState: SimulationState,
-    changedControl: string
-  ): string {
-    const prev = previousState;
-    const next = newState;
-    const control = changedControl;
-
-    console.log('Generating narration...');
-    // TODO: Implement actual narration generation using NarrationService
-    return 'Narration will be generated here.';
   }
 
   getCalculationDetails(

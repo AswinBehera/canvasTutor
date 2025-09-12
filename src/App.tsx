@@ -13,17 +13,21 @@ import { Canvas } from './components/Canvas';
 import { ReactFlowProvider } from '@xyflow/react'; // Import ReactFlowProvider
 import { Chatbot } from './components/Chatbot'; // Import Chatbot
 import { useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppState } from './context/AppStateContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ControlsPanel } from './components/ControlsPanel';
 import { ExportPanel } from './components/ExportPanel';
 import { ResizablePanel } from './components/ResizablePanel';
-
+import { ExtractionInsights } from './components/ExtractionInsights';
+import { CostDisplay } from './components/CostDisplay';
+import { SaveSessionDialog } from './components/SaveSessionDialog';
+import { SessionManager } from './components/SessionManager';
 
 function App() {
   const location = useLocation();
-      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage } = useAppState();
+      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, saveCurrentSession } = useAppState();
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   // This useEffect is now responsible for setting the components in the global state
   // when navigating to the canvas page with components in location.state.
@@ -54,6 +58,7 @@ function App() {
           <div className="space-x-4">
             <Link to="/login"><Button variant="ghost" className="text-sm font-medium">Login</Button></Link>
             <Link to="/get-started"><Button className="text-sm font-medium">Get Started</Button></Link>
+            <Link to="/sessions"><Button className="text-sm font-medium">Sessions</Button></Link>
           </div>
         </header>
       )}
@@ -160,49 +165,58 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/get-started" element={<InputPage />} />
+        <Route path="/sessions" element={<SessionManager />} />
         <Route path="/canvas" element={
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            
-            {/* Controls Panel (normal flow) */}
-            <div className="w-full py-1 px-2 flex items-center justify-center bg-white z-20 shadow-xs">
-              <ControlsPanel
-                controls={state.controls}
-                onControlChange={onControlChange}
-                onPlaySimulation={onPlaySimulation}
-                isSimulating={state.isSimulating}
-                onToggleShowMath={onToggleShowMath}
-                showMath={state.showMath}
-              />
-            </div>
-            <div style={{ display: 'flex', flexGrow: 1, position: 'relative', height: '100%' }}>
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
               
-              {/* Chatbot Area */}
-              <ResizablePanel initialWidth={300} minWidth={250} maxWidth={500} side="right" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                <div style={{ padding: '10px', overflowY: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada's Insights</h3>
-                  <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
-                  {state.narration && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                      <p>{state.narration}</p>
+              {/* Controls Panel (normal flow) */}
+              <div className="w-full py-1 px-2 flex items-center justify-center bg-white z-20 shadow-xs">
+                <ControlsPanel
+                  controls={state.controls}
+                  onControlChange={onControlChange}
+                  onPlaySimulation={onPlaySimulation}
+                  isSimulating={state.isSimulating}
+                  onToggleShowMath={onToggleShowMath}
+                  showMath={state.showMath}
+                  onSaveSession={() => setIsSaveDialogOpen(true)}
+                />
+              </div>
+              <div style={{ display: 'flex', flexGrow: 1, position: 'relative', height: '100%' }}>
+                
+                {/* Chatbot Area */}
+                <ResizablePanel initialWidth={400} minWidth={300} maxWidth={800} side="right" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                  <div style={{ padding: '10px', flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <ExtractionInsights confidence={state.confidence} suggestions={state.suggestions} />
+                    <CostDisplay totalCost={state.totalCost} breakdown={state.costBreakdown} />
+                    <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada's Insights</h3>
+                    <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
+                  </div>
+                </ResizablePanel>
+                {/* Canvas Area */}
+                <div style={{ flexGrow: 1 }}>
+                  {state.isSaving && (
+                    <div className="absolute top-2 right-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-md z-50">
+                      Saving...
                     </div>
                   )}
+                  <ErrorBoundary errorType="CanvasError" fallback={<div>Error rendering canvas.</div>}>
+                    <ReactFlowProvider>
+                      <Canvas nodes={state.canvasNodes} edges={state.canvasEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeDrop={onNodeDrop} showMath={state.showMath} />
+                    </ReactFlowProvider>
+                  </ErrorBoundary>
                 </div>
-              </ResizablePanel>
-              {/* Canvas Area */}
-              <div style={{ flexGrow: 1 }}>
-                {state.isSaving && (
-                  <div className="absolute top-2 right-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-md z-50">
-                    Saving...
-                  </div>
-                )}
-                <ErrorBoundary errorType="CanvasError" fallback={<div>Error rendering canvas.</div>}>
-                  <ReactFlowProvider>
-                    <Canvas nodes={state.canvasNodes} edges={state.canvasEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeDrop={onNodeDrop} showMath={state.showMath} />
-                  </ReactFlowProvider>
-                </ErrorBoundary>
               </div>
             </div>
-          </div>
+            <SaveSessionDialog
+              isOpen={isSaveDialogOpen}
+              onClose={() => setIsSaveDialogOpen(false)}
+              onSave={(sessionName) => {
+                saveCurrentSession(sessionName);
+                setIsSaveDialogOpen(false);
+              }}
+            />
+          </>
         } />
       </Routes>
 

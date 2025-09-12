@@ -27,8 +27,16 @@ type CanvasProps = {
 
 export function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDrop, showMath }: CanvasProps) {
   const { getCalculationDetails, state } = useAppState();
-  const { controls } = state;
+  const { controls, simulationState } = state;
   const { fitView } = useReactFlow();
+
+  const edgesWithData = edges.map(edge => ({
+    ...edge,
+    data: {
+      ...edge.data,
+      traffic: simulationState.systemMetrics.totalCost > 0 ? controls.traffic : 0,
+    }
+  }));
 
   useEffect(() => {
     if (nodes.length > 0 || edges.length > 0) {
@@ -65,7 +73,7 @@ export function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onConnect, 
     <div style={{ height: '100%' }} onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edgesWithData}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

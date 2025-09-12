@@ -21,16 +21,21 @@ export function AnimatedEdge({
     targetPosition,
   });
 
+  const numDots = data?.traffic ? Math.min(20, Math.ceil(data.traffic / 50)) : 0;
+
   return (
     <>
       <BaseEdge id={id} path={edgePath} />
-      <circle r="5" fill="red" className="nodrag nopan">
-        <animateMotion
-          dur="3s"
-          repeatCount="indefinite"
-          path={edgePath}
-        />
-      </circle>
+      {Array.from({ length: numDots }).map((_, i) => (
+        <circle key={i} r="5" fill="red" className="nodrag nopan">
+          <animateMotion
+            dur="3s"
+            repeatCount="indefinite"
+            path={edgePath}
+            begin={`${i * (3 / numDots)}s`}
+          />
+        </circle>
+      ))}
       {data?.label && (
         <EdgeLabelRenderer>
           <div

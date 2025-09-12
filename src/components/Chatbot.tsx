@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area'; // Assuming you have a scroll-area component
 import { Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatbotProps {
   onSendMessage: (message: string) => Promise<void>;
@@ -36,11 +37,11 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-grow p-2 border rounded-md mb-2">
+      <ScrollArea className="flex-grow p-2 border rounded-md mb-2 h-[calc(100%-50px)]">
         {messages.map((msg, index) => (
           <div key={index} className={`mb-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
             <span className={`inline-block p-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-              {msg.content}
+              {msg.role === 'user' ? msg.content : <ReactMarkdown>{msg.content}</ReactMarkdown>}
             </span>
           </div>
         ))}

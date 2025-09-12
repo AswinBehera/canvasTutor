@@ -10,10 +10,20 @@ export interface AppState {
   controls: ControlsState; // New
   isSimulating: boolean; // New
   showMath: boolean; // New
-  narration: string | null; // New
   isSaving: boolean; // New
   chatbotMessages: { role: 'user' | 'assistant'; content: string }[]; // New
   isChatbotResponding: boolean; // New
+  confidence: number | null; // New
+  suggestions: string[]; // New
+  totalCost: number; // New
+  costBreakdown: { [nodeId: string]: number }; // New
+}
+
+export interface Session {
+  id: string;
+  name: string;
+  timestamp: number;
+  state: AppState; // Store the entire AppState for the session
 }
 
 export interface InputPromptProps {

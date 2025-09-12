@@ -17,6 +17,7 @@ interface ControlsPanelProps {
     isSimulating: boolean;
     onToggleShowMath: (show: boolean) => void; // New prop
     showMath: boolean; // New prop
+    onSaveSession: () => void; // New prop
 }
 
 export const ControlsPanel = React.memo(function ControlsPanel({
@@ -26,6 +27,7 @@ export const ControlsPanel = React.memo(function ControlsPanel({
     isSimulating,
     onToggleShowMath,
     showMath,
+    onSaveSession,
 }: ControlsPanelProps) {
     return (
         <div className='flex items-center justify-between w-full m-4'>
@@ -157,6 +159,12 @@ export const ControlsPanel = React.memo(function ControlsPanel({
                         <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     )}
                     {isSimulating ? "Simulating..." : "Play Simulation"}
+                </Button>
+                <Button
+                    onClick={onSaveSession}
+                    className='whitespace-nowrap'
+                >
+                    Save
                 </Button>
                 {/*
         <Card className="p-2 h-24">

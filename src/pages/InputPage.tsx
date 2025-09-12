@@ -9,18 +9,21 @@ import ErrorBoundary from '../components/ErrorBoundary';
 const InputPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const { setComponents, setCurrentStep } = useAppState();
+  const { setComponents, setCurrentStep, setUserInput } = useAppState();
 
   const handleSubmit = async (input: string) => {
     setIsLoading(true);
     console.log('User input submitted:', input);
+    setUserInput(input);
 
     try {
       const extractor = new ComponentExtractorService();
-      const { nodes, edges } = await extractor.extractComponents(input); // Destructure nodes and edges
+      const { nodes, edges, confidence, suggestions } = await extractor.extractComponents(input); // Destructure nodes, edges, confidence, and suggestions
       console.log('Extracted Nodes:', nodes);
       console.log('Extracted Edges:', edges);
-      setComponents(nodes, edges); // Pass both nodes and edges to AppStateContext
+      console.log('Confidence:', confidence);
+      console.log('Suggestions:', suggestions);
+      setComponents(nodes, edges, confidence, suggestions); // Pass all to AppStateContext
       setCurrentStep('canvas'); // Update global step
       navigate('/canvas'); // Navigate to canvas page (state is already set in AppStateContext)
     } catch (error) {

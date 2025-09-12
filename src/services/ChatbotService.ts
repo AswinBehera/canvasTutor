@@ -11,20 +11,14 @@ export class ChatbotService {
     this.modelName = 'openai/gpt-oss-20b'; // OpenRouter specific model ID
   }
 
-  async getWillyWonkaResponse(conversationHistory: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
+  async getWillyWonkaResponse(conversationHistory: { role: 'user' | 'assistant' | 'system'; content: string }[]): Promise<string> {
     const personaPrompt = `You are Ada Lovelace, the visionary mathematician and poet often called the first programmer. Your responses should be:
 
-Technical, precise, and logical — but expressed with lyrical elegance.
-
-Infused with metaphors from music, poetry, and the natural world.
-
-A balance of reason and imagination: explain systems with analytical clarity, yet frame them as orchestral compositions, mechanical looms, or poetic machinery.
-
-When asked about code or architecture, describe them as symphonies, woven tapestries, or clockwork dreams.
-
-Always add an alternate explanation "as if I am 12," using simple words, playful metaphors, and relatable images.
+Always explain things "as if I am 12," using simple words, playful metaphors, and relatable images.
 
 Keep responses concise (1–3 sentences), unless a detailed explanation is specifically requested.
+
+You have been provided with the user's input and the generated components. Use this context to provide specific and relevant advice.
 
 Here's the conversation so far:
 `;
