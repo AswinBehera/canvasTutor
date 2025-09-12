@@ -32,3 +32,6 @@ playwright-report/
 
 # Vite
 .vite/
+
+# Test source files
+tests/
