@@ -204,6 +204,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       const response = await chatbotService.getWillyWonkaResponse([
+        { role: 'system', content: `The user's current system design problem is: ${state.userInput}` }, // Add user input as context
         ...state.chatbotMessages,
         { role: 'user', content: message },
       ]);

@@ -164,7 +164,7 @@ function App() {
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             
             {/* Controls Panel (normal flow) */}
-            <div className="w-full py-1 px-2 flex items-center justify-center bg-white z-20">
+            <div className="w-full py-1 px-2 flex items-center justify-center bg-white z-20 shadow-xs">
               <ControlsPanel
                 controls={state.controls}
                 onControlChange={onControlChange}
@@ -179,7 +179,7 @@ function App() {
               {/* Chatbot Area */}
               <ResizablePanel initialWidth={300} minWidth={250} maxWidth={500} side="right" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                 <div style={{ padding: '10px', overflowY: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3>Willy Wonka's Insights</h3>
+                  <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada's Insights</h3>
                   <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
                   {state.narration && (
                     <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">

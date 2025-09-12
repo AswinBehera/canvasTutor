@@ -57,7 +57,7 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
       <div className="flex">
         <Input
           type="text"
-          placeholder="Ask Willy Wonka..."
+          placeholder="Ask Ada..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => {

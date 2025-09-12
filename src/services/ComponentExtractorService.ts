@@ -86,6 +86,7 @@ Example output format:
 
       // Remove markdown code block fences if present
       const cleanedLlmOutput = llmOutput.replace(/^```json\s*|\s*```$/g, '').trim();
+      localStorage.setItem('llmOutput', cleanedLlmOutput);
       let parsedOutput: { nodes: ComponentCard[], edges: Edge[] };
       try {
         parsedOutput = JSON.parse(cleanedLlmOutput);
