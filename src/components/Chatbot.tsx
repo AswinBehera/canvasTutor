@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Assuming you have a scroll-area component
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import Markdown from 'markdown-to-jsx'; // Using markdown-to-jsx for rendering markdown content
 
 import type { Node, Edge } from '@xyflow/react';
 import type { CustomNodeData, ControlsState } from '@/types';
@@ -19,10 +19,19 @@ interface ChatbotProps {
   controls: ControlsState; // New: Pass current controls for context
 }
 
+/**
+ * Chatbot component for interacting with Ada, displaying messages, and providing contextual prompts.
+ * It renders chat messages, including markdown content from the assistant.
+ */
 export function Chatbot({ onSendMessage, messages = [], isResponding, input, onInputChange, canvasNodes, canvasEdges, controls }: ChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true); // Add a ref to track initial mount
+  // Ref to track initial mount to prevent unwanted scroll on first render.
+  const isInitialMount = useRef(true);
 
+  /**
+   * Handles sending a message to the chatbot.
+   * Clears the input field after sending.
+   */
   const handleSend = async () => {
     if (input.trim()) {
       await onSendMessage(input);
@@ -30,16 +39,21 @@ export function Chatbot({ onSendMessage, messages = [], isResponding, input, onI
     }
   };
 
+  /**
+   * Scrolls the chat messages to the bottom, providing a smooth user experience.
+   */
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Effect to scroll to bottom whenever new messages are added.
   useEffect(() => {
+    // Prevent scrolling on the initial mount to avoid jarring UI.
     if (isInitialMount.current) {
       isInitialMount.current = false; // Set to false after first render
-      return; // Don't scroll on initial mount
+      return;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [messages]);
 
   return (
@@ -48,7 +62,8 @@ export function Chatbot({ onSendMessage, messages = [], isResponding, input, onI
         {messages.map((msg, index) => (
           <div key={index} className={`mb-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
             <span className={`inline-block p-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-              {msg.role === 'user' ? msg.content : <ReactMarkdown>{msg.content}</ReactMarkdown>}
+              {/* Render assistant messages with Markdown for rich text formatting */}
+              {msg.role === 'user' ? msg.content : <Markdown>{msg.content}</Markdown>}
             </span>
           </div>
         ))}
@@ -62,7 +77,8 @@ export function Chatbot({ onSendMessage, messages = [], isResponding, input, onI
         )}
         <div ref={messagesEndRef} />
       </ScrollArea>
-      <div className="mb-2 flex flex-wrap gap-2"> {/* Suggestion cue cards */}
+      {/* Suggestion cue cards for common queries */}
+      <div className="mb-2 flex flex-wrap gap-2">
         {[{
           label: "Explain Cost",
           prompt: `Considering the current system architecture with a traffic of ${controls.traffic} users, please provide a detailed explanation of the cost implications. The system components include: ${canvasNodes.map(n => `${n.data.label} (${n.data.category}, Managed: ${n.data.techOptions[0]}, DIY: ${n.data.techOptions[1]}, Base Cost: ${n.data.baseMetrics?.cost})`).join("; ")}. How do these components and their interactions contribute to the overall cost, and what factors might influence it further?`
@@ -85,6 +101,7 @@ export function Chatbot({ onSendMessage, messages = [], isResponding, input, onI
           </Button>
         ))}
       </div>
+      {/* Input field and send button for chatbot interaction */}
       <div className="flex">
         <Input
           type="text"

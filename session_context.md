@@ -46,7 +46,7 @@
 *   **Legend of Colors:**
     *   A `CategoryLegend` component has been added to display a legend of node colors.
 *   **Export Markdown Content Refinement:**
-    *   The `generateSpecMarkdown` function in `ExportService.ts` has been completely rewritten to produce a more detailed, AI-ready software architect spec plan.
+    *   The `generateSpecMarkdown` function in `ExportService.ts` has been significantly enhanced to produce a more detailed, AI-ready software architect spec plan, incorporating user input, use cases, cost reduction techniques, a glossary of terms (enriched by chatbot interactions), a specific scale-up plan, and clear next steps.
     *   It now includes:
         *   **Project Overview & Use Cases:** Expands on the user's input prompt to flesh out the idea and list core use cases.
         *   **System Architecture:** Detailed breakdown of components (nodes) with their purpose, technology considerations (Managed/DIY options), estimated base monthly cost, key performance indicators, and scaling behavior.
@@ -56,12 +56,16 @@
         *   **Deployment Strategy:** Provides general deployment steps (Version Control, CI/CD, Cloud Provider, IaC, Monitoring & Logging, Containerization) and detailed API Key Management & Security best practices.
         *   **Simulation Insights:** (If available) Presents key performance indicators based on simulated traffic.
         *   **Scale-Up Plan:** Outlines phased scale-up strategies for initial growth, accelerated growth, and hypergrowth.
-        *   **Glossary of Terms:** Defines key technical jargon used in the document.
+        *   **Glossary of Terms:** Defines key technical jargon used in the document, with additional context from Ada's chat messages.
         *   **Next Steps:** Guides the user on how to proceed with the report.
+    *   The markdown formatting for code snippets (backticks) has been corrected.
+*   **Export Modal UI Improvement:**
+    *   The `ExportPanel.tsx` component now uses `ReactMarkdown` to render the generated markdown content, ensuring proper display of tables, headings, and highlights.
+    *   The modal's dimensions and scrolling behavior have been optimized for better readability.
 
 ## Pending Implementations (from `tasks.md`)
 
-*   [ ] 10. Export Functionality
+*   [x] 10. Export Functionality
 *   [ ] **Session Management Refinement:**
     *   Ensure each save creates a *new* session entry unless explicitly updating an existing one.
     *   Implement full session loading to restore canvas (nodes, edges) and chat history.

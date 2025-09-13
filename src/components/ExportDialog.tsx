@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import ReactMarkdown from 'react-markdown';
+// import ReactMarkdown from 'react-markdown'; // Removed as markdown rendering is handled by ExportPanel
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -18,6 +18,11 @@ interface ExportDialogProps {
   onDownload: (content: string, filename: string) => void;
 }
 
+/**
+ * ExportDialog component displays the generated system specification in a dialog.
+ * Note: Markdown rendering is primarily handled by ExportPanel. This component
+ * now displays raw markdown content for simplicity, assuming ExportPanel is the primary interface.
+ */
 const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, markdownContent, onDownload }) => {
   const filename = "system_spec.md";
 
@@ -31,9 +36,10 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, markdownCo
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow p-4 border rounded-md bg-gray-50 overflow-auto">
-          <ReactMarkdown>
+          {/* Displaying raw markdown content. If rich rendering is needed here, a markdown library would be re-introduced. */}
+          <div className="prose max-w-none">
             {markdownContent}
-          </ReactMarkdown>
+          </div>
         </ScrollArea>
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>Close</Button>
