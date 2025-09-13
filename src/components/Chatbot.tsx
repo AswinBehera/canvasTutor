@@ -5,21 +5,28 @@ import { ScrollArea } from '@/components/ui/scroll-area'; // Assuming you have a
 import { Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+import type { Node, Edge } from '@xyflow/react';
+import type { CustomNodeData, ControlsState } from '@/types';
+
 interface ChatbotProps {
   onSendMessage: (message: string) => Promise<void>;
   messages: { role: 'user' | 'assistant'; content: string }[];
   isResponding: boolean;
+  input: string; // New prop for controlled input
+  onInputChange: (value: string) => void; // New prop for input change handler
+  canvasNodes: Node<CustomNodeData>[]; // New: Pass current nodes for context
+  canvasEdges: Edge[]; // New: Pass current edges for context
+  controls: ControlsState; // New: Pass current controls for context
 }
 
-export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotProps) {
-  const [input, setInput] = useState('');
+export function Chatbot({ onSendMessage, messages = [], isResponding, input, onInputChange, canvasNodes, canvasEdges, controls }: ChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true); // Add a ref to track initial mount
 
   const handleSend = async () => {
     if (input.trim()) {
       await onSendMessage(input);
-      setInput('');
+      onInputChange(''); // Clear input after sending
     }
   };
 
@@ -56,16 +63,25 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
         <div ref={messagesEndRef} />
       </ScrollArea>
       <div className="mb-2 flex flex-wrap gap-2"> {/* Suggestion cue cards */}
-        {["Explain Cost", "Optimize Traffic", "Suggest Cache"].map((suggestion, index) => (
+        {[{
+          label: "Explain Cost",
+          prompt: `Considering the current system architecture with a traffic of ${controls.traffic} users, please provide a detailed explanation of the cost implications. The system components include: ${canvasNodes.map(n => `${n.data.label} (${n.data.category}, Managed: ${n.data.techOptions[0]}, DIY: ${n.data.techOptions[1]}, Base Cost: ${n.data.baseMetrics?.cost})`).join("; ")}. How do these components and their interactions contribute to the overall cost, and what factors might influence it further?`
+        }, {
+          label: "Optimize Traffic",
+          prompt: `Our current system is handling ${controls.traffic} users. Please suggest strategies to optimize its performance and scalability for this traffic level. The existing components are: ${canvasNodes.map(n => `${n.data.label} (${n.data.category}, Managed: ${n.data.techOptions[0]}, DIY: ${n.data.techOptions[1]})`).join("; ")}. How can we enhance the system to efficiently manage and scale with the given traffic, considering these components?`
+        }, {
+          label: "Suggest Cache",
+          prompt: `Given the current system architecture and a traffic of ${controls.traffic} users, what caching strategies would you recommend? The system components include: ${canvasNodes.map(n => `${n.data.label} (${n.data.category}, Managed: ${n.data.techOptions[0]}, DIY: ${n.data.techOptions[1]})`).join("; ")}. Please explain how these strategies would integrate with our existing setup and the benefits they would provide.`
+        }].map((suggestion, index) => (
           <Button
             key={index}
             variant="outline"
             size="sm"
-            onClick={() => setInput(suggestion)}
+            onClick={() => onInputChange(suggestion.prompt)} // Use onInputChange with detailed prompt
             disabled={isResponding}
             className="text-xs px-2 py-1 h-auto"
           >
-            {suggestion}
+            {suggestion.label}
           </Button>
         ))}
       </div>
@@ -74,7 +90,7 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
           type="text"
           placeholder="Ask Ada..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => onInputChange(e.target.value)} // Use onInputChange
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
               handleSend();

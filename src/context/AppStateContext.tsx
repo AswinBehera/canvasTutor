@@ -321,30 +321,43 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const formatUserInputForAda = (input: string) => {
     try {
       const parsedInput = JSON.parse(input);
-      let formattedMessage = "";
+      let parts: string[] = [];
+
       if (parsedInput.description) {
-        formattedMessage += `You're looking to build a ${parsedInput.description}.`;
+        parts.push(`a system for ${parsedInput.description}`);
       }
       if (parsedInput.goal) {
-        formattedMessage += ` Your main goal is to ${parsedInput.goal}.`;
+        parts.push(`with the primary goal of ${parsedInput.goal}`);
       }
-      if (parsedInput.features && parsedInput.features.length > 0) {
-        formattedMessage += ` Key features include ${parsedInput.features}.`;
+      if (parsedInput.features) {
+        parts.push(`incorporating features such as ${parsedInput.features}`);
       }
       if (parsedInput.techPreferences) {
-        formattedMessage += ` You have a preference for ${parsedInput.techPreferences}.`;
+        parts.push(`and a preference for ${parsedInput.techPreferences} technologies`);
       }
-      return formattedMessage.trim() || "You've provided some input for a system design.";
+
+      let formattedMessage = "";
+      if (parts.length > 0) {
+        formattedMessage = `Welcome! Based on your request to build ${parts.join(", ")}, this canvas is ready for you to design and simulate.`;
+      } else {
+        formattedMessage = "Welcome! This canvas is ready for you to design and simulate your system architecture.";
+      }
+
+      formattedMessage += " You can adjust controls to see their impact, and I am here to help you explore and optimize your design.";
+
+      return formattedMessage;
     } catch (e) {
       console.error("Failed to parse user input for Ada chat:", e);
-      return "You've provided some input for a system design.";
+      return "Welcome! This canvas is ready for you to design and simulate your system architecture. You can adjust controls to see their impact, and I am here to help you explore and optimize your design.";
     }
   };
 
   const onPlaySimulation = useCallback(async () => {
+    console.log('onPlaySimulation called');
     // Toggle the simulation state immediately
     setAppState((prevState) => {
       const newIsSimulating = !prevState.isSimulating;
+      console.log(`Setting isSimulating to: ${newIsSimulating}`);
       return { ...prevState, isSimulating: newIsSimulating };
     });
 
@@ -372,9 +385,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           costBreakdown: costEstimation.breakdown,
           isSimulating: false, // Set to false after simulation completes
         }));
+        console.log('Simulation completed. isSimulating set to false.');
       } catch (error) {
         console.error('Error during simulation:', error);
         setAppState((prevState) => ({ ...prevState, isSimulating: false }));
+        console.log('Simulation error. isSimulating set to false.');
         // Optionally, set an error state or show a user-friendly message
       }
     }

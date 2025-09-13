@@ -24,11 +24,12 @@ import InitialChatbotMessage from './components/InitialChatbotMessage'; // New i
 import ExportDialog from './components/ExportDialog'; // New import
 import { ComponentExtractorService } from './services/ComponentExtractorService'; // New import
 import type { ComponentCard, Edge } from './types';
+import { CategoryLegend } from './components/CategoryLegend'; // Import CategoryLegend
 
 
 function App() {
   const location = useLocation();
-      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, onSendAdaMessage, onGenerateExportMarkdown, TRAFFIC_THRESHOLDS } = useAppState();
+      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, onSendAdaMessage, onGenerateExportMarkdown, TRAFFIC_THRESHOLDS, setUserInput } = useAppState();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false); // New state for ExportDialog
 
   const handleExportClick = () => {
@@ -219,9 +220,9 @@ function App() {
                     <ResizableHandle />
                     <ResizablePanel defaultSize={60}> {/* Chatbot takes 60% */}
                       <div className="flex h-full items-center justify-center p-6 flex-col">
-                        <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada\'s Insights</h3>
+                        <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada's Insights</h3>
                         <div className="flex-grow overflow-y-auto w-full">
-                          <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
+                          <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} input={state.userInput} onInputChange={setUserInput} canvasNodes={state.canvasNodes} canvasEdges={state.canvasEdges} controls={state.controls} />
                         </div>
                       </div>
                     </ResizablePanel>
@@ -240,7 +241,7 @@ function App() {
               </ResizablePanelGroup>
             </div>
             <InitialChatbotMessage onSendAdaMessage={onSendAdaMessage} userInput={state.userInput} /> {/* New component for initial message */}
-            {isExportDialogOpen && (
+            <CategoryLegend /> {/* Add the CategoryLegend component */}            {isExportDialogOpen && (
               <ExportDialog
                 isOpen={isExportDialogOpen}
                 onClose={() => setIsExportDialogOpen(false)}

@@ -86,22 +86,25 @@ export function CustomNode({ data, selected }: CustomNodeProps) {
         <TooltipTrigger asChild>
           <div
             ref={nodeRef} // Add ref to the node div
-            className={`flex flex-col items-center justify-center p-4 rounded-full text-white w-32 h-32 shadow-md ${bgColor} ${selected ? 'border-4 border-blue-300 ring-4 ring-blue-300' : ''}`}
+            className={`flex flex-col items-center justify-center p-4 rounded-full text-white w-36 h-36 shadow-md transition-all duration-200 ease-in-out hover:scale-105 ${bgColor} ${selected ? 'border-4 border-blue-300 ring-4 ring-blue-300' : ''}`}
             style={{ border: selected ? '4px solid #60a5fa' : `4px dashed #ffffff` }} // More prominent selection
             onContextMenu={handleContextMenu} // Add context menu handler
           >
             <Handle type="target" position={Position.Left} className="!bg-white" />
-            <Icon size={32} className="mb-2" />
-            <div className="text-sm font-bold text-center">{label}</div>
-            <div className="text-xs text-center">ID: {componentId}</div>
-            <div className="text-xs text-center">{getResponsivenessEmoji(baseMetrics.responsiveness)} ${baseMetrics.cost}/mo</div>
+            <div className="absolute -top-4 bg-black rounded-full p-2 z-10">
+              <Icon size={24} className="text-white" />
+            </div>
+            <div className="flex flex-col items-center justify-center flex-grow mt-4">
+              <div className="text-base font-bold text-center leading-tight">{label}</div>
+              <div className="text-sm text-center mt-1">{getResponsivenessEmoji(baseMetrics.responsiveness)} ${baseMetrics.cost}/mo</div>
+            </div>
             
-            {/* Tech Choice Toggle - simplified for horizontal layout */}
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center p-1 bg-black bg-opacity-50 rounded-b-full">
-              <ToggleGroup type="single" value={techChoice} onValueChange={(value: 'managed' | 'diy') => setTechChoice(value)} className="space-x-1">
+            {/* Tech Choice Toggle */}
+            <div className="absolute bottom-2 flex-shrink-0">
+              <ToggleGroup type="single" value={techChoice} onValueChange={(value: 'managed' | 'diy') => setTechChoice(value)} className="space-x-1 bg-white bg-opacity-20 rounded-md p-0.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToggleGroupItem value="managed" className="text-xs px-1 py-0.5">M</ToggleGroupItem>
+                    <ToggleGroupItem value="managed" className="text-xs px-2 py-1 h-auto text-white data-[state=on]:bg-blue-600 data-[state=on]:text-white">M</ToggleGroupItem>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{techOptions[0]}</p>
@@ -109,7 +112,7 @@ export function CustomNode({ data, selected }: CustomNodeProps) {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToggleGroupItem value="diy" className="text-xs px-1 py-0.5">D</ToggleGroupItem>
+                    <ToggleGroupItem value="diy" className="text-xs px-2 py-1 h-auto text-white data-[state=on]:bg-blue-600 data-[state=on]:text-white">D</ToggleGroupItem>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{techOptions[1]}</p>
