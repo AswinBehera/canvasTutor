@@ -31,3 +31,8 @@
 *   [ ] 12. Testing Implementation
 *   [ ] 13. Performance Optimization and Polish
 *   [ ] 14. Final Integration and Demo Setup
+*   [ ] **Session Management Refinement:**
+    *   Ensure each save creates a *new* session entry unless explicitly updating an existing one.
+    *   Implement full session loading to restore canvas (nodes, edges) and chat history.
+*   [ ] **Chat Window Scrolling Fix:** Resolve the issue where the chat window causes the entire page to scroll.
+*   [ ] **Chat Window Width Adjustment:** Further increase the width of the chat window.

@@ -13,8 +13,6 @@ export interface AppState {
   isSaving: boolean; // New
   chatbotMessages: { role: 'user' | 'assistant'; content: string }[]; // New
   isChatbotResponding: boolean; // New
-  confidence: number | null; // New
-  suggestions: string[]; // New
   totalCost: number; // New
   costBreakdown: { [nodeId: string]: number }; // New
 }

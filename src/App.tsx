@@ -1,12 +1,13 @@
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable.tsx'; // New import
 import { Routes, Route, Link } from 'react-router-dom';
 
 import FeaturesPage from './pages/FeaturesPage';
 import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
-import LoginPage from './pages/LoginPage';
+
 import InputPage from './pages/InputPage';
 import { Canvas } from './components/Canvas';
 // import { ComponentsPalette } from './components/ComponentsPalette'; // Removed as it's no longer used
@@ -18,15 +19,16 @@ import { useAppState } from './context/AppStateContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ControlsPanel } from './components/ControlsPanel';
 import { ExportPanel } from './components/ExportPanel';
-import { ResizablePanel } from './components/ResizablePanel';
-import { ExtractionInsights } from './components/ExtractionInsights';
+
 import { CostDisplay } from './components/CostDisplay';
 import { SaveSessionDialog } from './components/SaveSessionDialog';
 import { SessionManager } from './components/SessionManager';
+import InitialChatbotMessage from './components/InitialChatbotMessage'; // New import
+
 
 function App() {
   const location = useLocation();
-      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, saveCurrentSession } = useAppState();
+      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, saveCurrentSession, onSendAdaMessage } = useAppState();
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   // This useEffect is now responsible for setting the components in the global state
@@ -56,7 +58,6 @@ function App() {
             <Link to="/contact" className="text-sm font-medium hover:text-primary">Contact</Link>
           </nav>
           <div className="space-x-4">
-            <Link to="/login"><Button variant="ghost" className="text-sm font-medium">Login</Button></Link>
             <Link to="/get-started"><Button className="text-sm font-medium">Get Started</Button></Link>
             <Link to="/sessions"><Button className="text-sm font-medium">Sessions</Button></Link>
           </div>
@@ -163,7 +164,7 @@ function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        
         <Route path="/get-started" element={<InputPage />} />
         <Route path="/sessions" element={<SessionManager />} />
         <Route path="/canvas" element={
@@ -182,40 +183,38 @@ function App() {
                   onSaveSession={() => setIsSaveDialogOpen(true)}
                 />
               </div>
-              <div style={{ display: 'flex', flexGrow: 1, position: 'relative', height: '100%' }}>
-                
-                {/* Chatbot Area */}
-                <ResizablePanel initialWidth={400} minWidth={300} maxWidth={800} side="right" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                  <div style={{ padding: '10px', flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <ExtractionInsights confidence={state.confidence} suggestions={state.suggestions} />
-                    <CostDisplay totalCost={state.totalCost} breakdown={state.costBreakdown} />
-                    <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada's Insights</h3>
-                    <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
+              <ResizablePanelGroup direction="horizontal" className="flex-grow"> {/* Changed to horizontal */}
+                <ResizablePanel defaultSize={30} minSize={20}> {/* Left Panel */}
+                  <ResizablePanelGroup direction="vertical" className="h-full border-r">
+                    <ResizablePanel defaultSize={40}> {/* CostDisplay takes 40% */}                      <div className="flex h-full items-center justify-center flex-col">                        <CostDisplay totalCost={state.totalCost} breakdown={state.costBreakdown} />                      </div>                    </ResizablePanel>                    <ResizableHandle />                    <ResizablePanel defaultSize={60}> {/* Chatbot takes 60% */}                      <div className="flex h-full items-center justify-center p-6 flex-col">                        <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada\'s Insights</h3>                        <div className="flex-grow overflow-y-auto w-full">                          <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />                        </div>                      </div>                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={70}> {/* Canvas Area */}
+                  <div style={{ flexGrow: 1, height: '100%' }}> {/* Removed flexGrow: 1 from here, added to parent */}
+                    {state.isSaving && (
+                      <div className="absolute top-2 right-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-md z-50">
+                        Saving...
+                      </div>
+                    )}
+                    <ErrorBoundary errorType="CanvasError" fallback={<div>Error rendering canvas.</div>}>
+                        <ReactFlowProvider>
+                          <Canvas nodes={state.canvasNodes} edges={state.canvasEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeDrop={onNodeDrop} showMath={state.showMath} />
+                        </ReactFlowProvider>
+                    </ErrorBoundary>
                   </div>
                 </ResizablePanel>
-                {/* Canvas Area */}
-                <div style={{ flexGrow: 1 }}>
-                  {state.isSaving && (
-                    <div className="absolute top-2 right-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-md z-50">
-                      Saving...
-                    </div>
-                  )}
-                  <ErrorBoundary errorType="CanvasError" fallback={<div>Error rendering canvas.</div>}>
-                    <ReactFlowProvider>
-                      <Canvas nodes={state.canvasNodes} edges={state.canvasEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeDrop={onNodeDrop} showMath={state.showMath} />
-                    </ReactFlowProvider>
-                  </ErrorBoundary>
-                </div>
-              </div>
+              </ResizablePanelGroup>
             </div>
             <SaveSessionDialog
               isOpen={isSaveDialogOpen}
               onClose={() => setIsSaveDialogOpen(false)}
               onSave={(sessionName) => {
-                saveCurrentSession(sessionName);
-                setIsSaveDialogOpen(false);
+                  saveCurrentSession(sessionName);
+                  setIsSaveDialogOpen(false);
               }}
             />
+            <InitialChatbotMessage onSendAdaMessage={onSendAdaMessage} userInput={state.userInput} /> {/* New component for initial message */}
           </>
         } />
       </Routes>

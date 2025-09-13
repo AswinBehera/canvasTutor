@@ -31,9 +31,8 @@ interface AppStateContextType {
   chatbotMessages: { role: 'user' | 'assistant'; content: string }[]; // New
   isChatbotResponding: boolean; // New
   onSendChatbotMessage: (message: string) => Promise<void>; // New
+  onSendAdaMessage: (message: string) => Promise<void>; // New: For Ada's initial message
   setUserInput: (input: string) => void; // New
-  confidence: number | null; // New
-  suggestions: string[]; // New
   totalCost: number; // New
   costBreakdown: { [nodeId: string]: number }; // New
   sessions: Session[]; // New
@@ -47,44 +46,44 @@ interface AppStateContextType {
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setAppState] = useState<AppState>({
-    currentStep: 'input',
-    userInput: '',
-    components: [],
-    canvasNodes: [] as Node<CustomNodeData>[],
-    canvasEdges: [],
-    simulationState: {
-      nodeMetrics: new Map(),
-      systemMetrics: {
-        totalCost: 0,
-        averageResponseTime: 0,
-        reliability: 0,
+  const [state, setAppState] = useState<AppState>(() => {
+    return {
+      currentStep: 'input',
+      userInput: '',
+      components: [],
+      canvasNodes: [] as Node<CustomNodeData>[],
+      canvasEdges: [],
+      simulationState: {
+        nodeMetrics: new Map(),
+        systemMetrics: {
+          totalCost: 0,
+          averageResponseTime: 0,
+          reliability: 0,
+        },
+        recommendations: [],
+        controls: {
+          traffic: 1, // Least possible traffic
+          instances: 1, // Least possible instances
+          cache: 'off', // Assuming 'off' is least cost for cache
+          vendor: 'diy', // DIY is generally cheaper
+        },
       },
-      recommendations: [],
-      controls: { // Initialize controls within simulationState
-        traffic: 100,
-        instances: 1,
-        cache: 'off',
-        vendor: 'managed',
+      controls: {
+        traffic: 1, // Least possible traffic
+        instances: 1, // Least possible instances
+        cache: 'off', // Assuming 'off' is least cost for cache
+        vendor: 'diy', // DIY is generally cheaper
       },
-    },
-    controls: {
-      traffic: 100,
-      instances: 1,
-      cache: 'off',
-      vendor: 'managed',
-    },
-    isSimulating: false,
-    showMath: false, // New state for showing math
-    isSaving: false, // Initialize isSaving
-    chatbotMessages: [], // Initialize chatbotMessages
-    isChatbotResponding: false, // Initialize isChatbotResponding
-    confidence: null, // Initialize confidence
-    suggestions: [], // Initialize suggestions
-    totalCost: 0, // Initialize totalCost
-    costBreakdown: {}, // Initialize costBreakdown
-    sessions: [], // Initialize sessions
-    currentSessionId: null, // Initialize currentSessionId
+      isSimulating: false,
+      showMath: false,
+      isSaving: false,
+      chatbotMessages: [],
+      isChatbotResponding: false,
+      totalCost: 0,
+      costBreakdown: {},
+      sessions: [],
+      currentSessionId: null,
+    };
   });
 
   const simulationService = new SimulationService();
@@ -123,7 +122,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const onNodeDrop = useCallback(
     (component: ComponentCard, position: { x: number; y: number }) => {
       const newNode: Node<CustomNodeData> = {
-        id: component.id, // Use component.id directly for consistency
+        id: component.id,
         type: 'custom',
         position,
         data: { label: component.label, description: component.description, category: component.category, baseMetrics: component.baseMetrics || { responsiveness: 0, cost: 0, reliability: 0 }, scalingFactors: component.scalingFactors || { traffic: 0, instances: 0 }, techOptions: component.techOptions },
@@ -136,17 +135,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [],
   );
 
-  const setComponents = useCallback((components: ComponentCard[], initialEdges: Edge[] = [], confidence: number | undefined, suggestions: string[] | undefined) => {
+  const setComponents = useCallback((components: ComponentCard[], initialEdges: Edge[] = []) => {
     console.log('setComponents called with initialEdges:', initialEdges);
     const newNodes = componentsToNodes(components);
-    const { layoutedNodes, layoutedEdges } = getLayoutedElements(newNodes as Node<CustomNodeData>[], initialEdges); // Apply layout
+    const { layoutedNodes, layoutedEdges } = getLayoutedElements(newNodes as Node<CustomNodeData>[], initialEdges);
     setAppState((prevState) => ({
       ...prevState,
       components,
-      canvasNodes: layoutedNodes, // Initialize canvas nodes from extracted components
-      canvasEdges: layoutedEdges, // Set initial edges
-      confidence: confidence !== undefined ? confidence : prevState.confidence,
-      suggestions: suggestions !== undefined ? suggestions : prevState.suggestions,
+      canvasNodes: layoutedNodes,
+      canvasEdges: layoutedEdges,
     }));
   }, []);
 
@@ -155,7 +152,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ...prevState,
       simulationState: {
         ...simulationState,
-        controls: prevState.controls, // Ensure controls are always present in simulationState
+        controls: prevState.controls,
       },
     }));
   }, []);
@@ -191,7 +188,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAppState((prevState) => ({ ...prevState, showMath: show }));
   }, []);
 
-  const chatbotService = new ChatbotService(); // Instantiate ChatbotService
+  const chatbotService = new ChatbotService();
 
   const onSendChatbotMessage = useCallback(async (message: string) => {
     setAppState((prevState) => ({
@@ -202,8 +199,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       const response = await chatbotService.getWillyWonkaResponse([
-        { role: 'system', content: `The user's current system design problem is: ${state.userInput}` }, // Add user input as context
-        { role: 'system', content: `The current components are: ${JSON.stringify(state.components)}` }, // Add components as context
+        { role: 'system', content: `The user's current system design problem is: ${state.userInput}` },
+        { role: 'system', content: `The current components are: ${JSON.stringify(state.components)}` },
         ...state.chatbotMessages,
         { role: 'user', content: message },
       ]);
@@ -223,33 +220,72 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [state.chatbotMessages, state.userInput, state.components]);
 
-  const onPlaySimulation = useCallback(async () => {
-    setAppState((prevState) => ({ ...prevState, isSimulating: true }));
-    try {
-      const simulationResult = await simulationService.calculateMetrics(
-        state.canvasNodes as Node<CustomNodeData>[],
-        state.canvasEdges,
-        state.controls
-      );
+  const onSendAdaMessage = useCallback(async (message: string) => {
+    setAppState((prevState) => ({
+      ...prevState,
+      chatbotMessages: [...prevState.chatbotMessages, { role: 'assistant', content: message }],
+      isChatbotResponding: true, // Set to true while Ada is "thinking"
+    }));
 
-      const costEstimation = costEstimatorService.estimateCost(
-        state.canvasNodes as Node<CustomNodeData>[],
-        state.controls
-      );
+    try {
+      // Here, we're simulating Ada "thinking" or processing the request
+      // In a real scenario, this might involve another LLM call or complex logic
+      // For now, we'll just set isChatbotResponding to false after a short delay
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
 
       setAppState((prevState) => ({
         ...prevState,
-        simulationState: simulationResult,
-        totalCost: costEstimation.totalCost,
-        costBreakdown: costEstimation.breakdown,
-        isSimulating: false,
+        isChatbotResponding: false, // Ada has finished "thinking"
       }));
     } catch (error) {
-      console.error('Error during simulation:', error);
-      setAppState((prevState) => ({ ...prevState, isSimulating: false }));
-      // Optionally, set an error state or show a user-friendly message
+      console.error('Error sending Ada\'s initial message:', error);
+      setAppState((prevState) => ({
+        ...prevState,
+        chatbotMessages: [...prevState.chatbotMessages, { role: 'assistant', content: "Oh dear, I seem to have misplaced my thoughts! Please try again." }],
+        isChatbotResponding: false,
+      }));
     }
-  }, [state.canvasNodes, state.canvasEdges, state.controls]);
+  }, []);
+
+  const onPlaySimulation = useCallback(async () => {
+    setAppState((prevState) => {
+      const newIsSimulating = !prevState.isSimulating; // Toggle the state
+      if (newIsSimulating) {
+        // Start simulation
+        return { ...prevState, isSimulating: true };
+      } else {
+        // Stop simulation
+        return { ...prevState, isSimulating: false };
+      }
+    });
+
+    if (!state.isSimulating) { // Only run simulation logic if starting
+      try {
+        const simulationResult = await simulationService.calculateMetrics(
+          state.canvasNodes as Node<CustomNodeData>[],
+          state.canvasEdges,
+          state.controls
+        );
+
+        const costEstimation = costEstimatorService.estimateCost(
+          state.canvasNodes as Node<CustomNodeData>[],
+          state.controls
+        );
+
+        setAppState((prevState) => ({
+          ...prevState,
+          simulationState: simulationResult,
+          totalCost: costEstimation.totalCost,
+          costBreakdown: costEstimation.breakdown,
+          isSimulating: false, // Set to false after simulation completes
+        }));
+      } catch (error) {
+        console.error('Error during simulation:', error);
+        setAppState((prevState) => ({ ...prevState, isSimulating: false }));
+        // Optionally, set an error state or show a user-friendly message
+      }
+    }
+  }, [state.canvasNodes, state.canvasEdges, state.controls, state.isSimulating]); // Added state.isSimulating to dependencies
 
   const saveCurrentSession = useCallback((sessionName: string) => {
     setAppState((prevState) => {
@@ -343,7 +379,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       );
       localStorage.setItem('canvasTutorSessions', JSON.stringify(updatedSessions));
     }
-  }, [state.currentSessionId, state.userInput, state.components, state.canvasNodes, state.canvasEdges, state.simulationState, state.controls, state.chatbotMessages, state.confidence, state.suggestions, state.totalCost, state.costBreakdown]);
+  }, [state.currentSessionId, state.userInput, state.components, state.canvasNodes, state.canvasEdges, state.simulationState, state.controls, state.chatbotMessages, state.totalCost, state.costBreakdown]);
 
   // Canvas auto-save hook (modified to use session saving)
   const exportService = new ExportService();
@@ -378,19 +414,20 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCurrentStep,
         onControlChange,
         onPlaySimulation,
-        onToggleShowMath, // New
-        getCalculationDetails: simulationService.getCalculationDetails, // New
-        isSaving: isSaving, // New
-        chatbotMessages: state.chatbotMessages, // New
-        isChatbotResponding: state.isChatbotResponding, // New
-        onSendChatbotMessage: onSendChatbotMessage, // New
+        onToggleShowMath,
+        getCalculationDetails: simulationService.getCalculationDetails,
+        isSaving: isSaving,
+        chatbotMessages: state.chatbotMessages,
+        isChatbotResponding: state.isChatbotResponding,
+                onSendChatbotMessage: onSendChatbotMessage, // New
+        onSendAdaMessage: onSendAdaMessage, // New
         setUserInput: setUserInput, // New
-        sessions: state.sessions, // New
-        currentSessionId: state.currentSessionId, // New
-        saveCurrentSession: saveCurrentSession, // New
-        loadSession: loadSession, // New
-        createNewSession: createNewSession, // New
-        deleteSession: deleteSession, // New
+        sessions: state.sessions,
+        currentSessionId: state.currentSessionId,
+        saveCurrentSession: saveCurrentSession,
+        loadSession: loadSession,
+        createNewSession: createNewSession,
+        deleteSession: deleteSession,
       }}
     >
       {children}

@@ -41,7 +41,7 @@ export class CostEstimatorService {
         nodeCost *= 0.7; // DIY is cheaper
       }
 
-      breakdown[node.id] = parseFloat(nodeCost.toFixed(2));
+      breakdown[data.label] = parseFloat(nodeCost.toFixed(2)); // Use node label for breakdown
       totalCost += nodeCost;
     }
 

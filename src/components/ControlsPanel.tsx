@@ -153,12 +153,12 @@ export const ControlsPanel = React.memo(function ControlsPanel({
                 <Button
                     onClick={onPlaySimulation}
                     disabled={isSimulating}
-                    className='whitespace-nowrap'
+                    className='whitespace-nowrap h-24 w-32' // Added h-24 and w-32
                 >
                     {isSimulating && (
                         <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     )}
-                    {isSimulating ? "Simulating..." : "Play Simulation"}
+                    {isSimulating ? "Simulating..." : "Simulate"}
                 </Button>
                 <Button
                     onClick={onSaveSession}

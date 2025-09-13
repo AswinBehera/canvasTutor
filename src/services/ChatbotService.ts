@@ -54,6 +54,7 @@ Here's the conversation so far:
       const llmOutput = data.choices[0]?.message?.content;
 
       if (!llmOutput) {
+        console.error('LLM response data:', data); // Log the full data object
         throw new Error('LLM response for chatbot was empty or in an unexpected format.');
       }
 
