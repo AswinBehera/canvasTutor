@@ -1,14 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import type { AppState, ComponentCard, SimulationState } from '@/types';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import type { AppState, ComponentCard, SimulationState, ThresholdComponentsResponse, CustomNodeData, ControlsState } from '@/types';
 import type { Node, Edge } from '@xyflow/react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
-import { componentsToNodes, getLayoutedElements } from '@/lib/utils'; // Import getLayoutedElements
+import { componentsToNodes, getLayoutedElements, ensureConnected } from '@/lib/utils'; // Import getLayoutedElements and ensureConnected
 import { SimulationService } from '../services/SimulationService';
 import { ExportService } from '../services/ExportService'; // Import ExportService
 import { CostEstimatorService } from '../services/CostEstimatorService'; // Import CostEstimatorService
-
-import type { ControlsState, CustomNodeData } from '@/types'; // Import ControlsState, CustomNodeData
-
+import { ComponentExtractorService } from '../services/ComponentExtractorService'; // Import ComponentExtractorService
 import { ChatbotService } from '../services/ChatbotService'; // Import ChatbotService
 
 interface AppStateContextType {
@@ -23,7 +21,7 @@ interface AppStateContextType {
   setComponents: (components: ComponentCard[], initialEdges?: Edge[]) => void;
     setSimulationState: (simulationState: SimulationState) => void;
   setCurrentStep: (step: AppState['currentStep']) => void;
-  onControlChange: (key: keyof ControlsState, value: string | number) => void;
+  onControlChange: (key: keyof ControlsState, value: number) => void;
   onPlaySimulation: () => void;
   onToggleShowMath: (show: boolean) => void; // New
   getCalculationDetails: (node: Node<CustomNodeData>, incomingTraffic: number, controls: ControlsState) => { formulas: string[]; breakdown: string[]; }; // New
@@ -36,6 +34,8 @@ interface AppStateContextType {
   costBreakdown: { [nodeId: string]: number }; // New
   exportedMarkdownContent: string; // New: Stores the generated markdown for export
   onGenerateExportMarkdown: () => void; // New: Function to trigger markdown generation
+  TRAFFIC_THRESHOLDS: number[]; // Expose traffic thresholds
+  onSetChatInput: (input: string) => void; // New: Function to set chat input field
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -58,16 +58,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         recommendations: [],
         controls: {
           traffic: 1, // Least possible traffic
-          instances: 1, // Least possible instances
-          cache: 'off', // Assuming 'off' is least cost for cache
-          vendor: 'diy', // DIY is generally cheaper
         },
       },
       controls: {
         traffic: 1, // Least possible traffic
-        instances: 1, // Least possible instances
-        cache: 'off', // Assuming 'off' is least cost for cache
-        vendor: 'diy', // DIY is generally cheaper
       },
       isSimulating: false,
       showMath: false,
@@ -77,6 +71,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       totalCost: 0,
       costBreakdown: {},
       exportedMarkdownContent: '',
+      thresholdComponents: {}, // Initialize threshold components
     };
   });
 
@@ -141,6 +136,22 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
   }, []);
 
+  const TRAFFIC_THRESHOLDS = [1000, 10000, 100000, 500000, 1000000]; // Define traffic thresholds
+
+  // Fetch threshold components on initial load
+  useEffect(() => {
+    const fetchThresholdData = async () => {
+      const extractor = new ComponentExtractorService();
+      try {
+        const data = await extractor.getThresholdComponents(TRAFFIC_THRESHOLDS);
+        setAppState((prevState) => ({ ...prevState, thresholdComponents: data }));
+      } catch (error) {
+        console.error('Error fetching threshold components:', error);
+      }
+    };
+    fetchThresholdData();
+  }, []); // Run only once on mount
+
   const setSimulationState = useCallback((simulationState: SimulationState) => {
     setAppState((prevState) => ({
       ...prevState,
@@ -165,17 +176,79 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
   }, []);
 
-  const onControlChange = useCallback(
-    (key: keyof ControlsState, value: string | number) => {
+  const onTrafficThresholdChange = useCallback(
+    (oldTraffic: number, newTraffic: number, currentNodes: Node<CustomNodeData>[], currentEdges: Edge[]) => {
+      console.log(`onTrafficThresholdChange: oldTraffic=${oldTraffic}, newTraffic=${newTraffic}`);
+      let nodes = [...currentNodes];
+      let edges = [...currentEdges];
+
+      // Helper to check if a node exists
+      const nodeExists = (id: string) => nodes.some(node => node.id === id);
+
+      // Iterate through thresholds to add/remove components
+      TRAFFIC_THRESHOLDS.forEach(threshold => {
+        const thresholdKey = String(threshold);
+        const thresholdData = state.thresholdComponents[thresholdKey];
+
+        if (!thresholdData) return; // Skip if no data for this threshold
+
+        if (newTraffic >= threshold && oldTraffic < threshold) {
+          // Traffic crossed threshold upwards: add components
+          console.log(`Adding components for threshold: ${threshold}`);
+          thresholdData.nodes.forEach(newNodeData => {
+            if (!nodeExists(newNodeData.id)) {
+              nodes.push({ ...newNodeData, type: 'custom', position: { x: 0, y: 0 }, data: { ...newNodeData, baseMetrics: newNodeData.baseMetrics || { responsiveness: 0, cost: 0, reliability: 0 }, scalingFactors: newNodeData.scalingFactors || { traffic: 0, instances: 0 } } }); // Add with default position and data
+            }
+          });
+          thresholdData.edges.forEach(newEdgeData => {
+            if (!edges.some(e => e.id === newEdgeData.id)) {
+              edges.push({ ...newEdgeData, type: 'animated' });
+            }
+          });
+        } else if (newTraffic < threshold && oldTraffic >= threshold) {
+          // Traffic crossed threshold downwards: remove components
+          console.log(`Removing components for threshold: ${threshold}`);
+          thresholdData.nodes.forEach(nodeToRemove => {
+            nodes = nodes.filter(n => n.id !== nodeToRemove.id);
+            edges = edges.filter(e => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id);
+          });
+          thresholdData.edges.forEach(edgeToRemove => {
+            edges = edges.filter(e => e.id !== edgeToRemove.id);
+          });
+        }
+      });
+
+      console.log('New nodes after threshold change:', nodes);
+      console.log('New edges after threshold change:', edges);
+
+      // Ensure all nodes are connected
+      const connectedEdges = ensureConnected(nodes, edges);
+
+      // Update the state with the new nodes and edges
+      const { layoutedNodes, layoutedEdges } = getLayoutedElements(nodes, connectedEdges);
       setAppState((prevState) => ({
         ...prevState,
-        controls: {
-          ...prevState.controls,
-          [key]: value,
-        },
+        canvasNodes: layoutedNodes,
+        canvasEdges: layoutedEdges,
       }));
     },
-    [],
+    [setAppState, state.thresholdComponents],
+  );
+
+  const onControlChange = useCallback(
+    (key: 'traffic', value: number) => {
+      setAppState((prevState) => {
+        const newControls = { ...prevState.controls, [key]: value };
+        console.log(`onControlChange: oldTraffic=${prevState.controls.traffic}, newTraffic=${value}`);
+        // Call the new traffic threshold change handler
+        onTrafficThresholdChange(prevState.controls.traffic, value, prevState.canvasNodes, prevState.canvasEdges);
+        return {
+          ...prevState,
+          controls: newControls,
+        };
+      });
+    },
+    [onTrafficThresholdChange],
   );
 
   const onToggleShowMath = useCallback((show: boolean) => {
@@ -192,9 +265,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
 
     try {
+      const graphContext = `Current Graph Nodes: ${JSON.stringify(state.canvasNodes.map(node => ({ id: node.id, label: node.data.label, category: node.data.category })))} Current Graph Edges: ${JSON.stringify(state.canvasEdges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target })))}`;
+
       const response = await chatbotService.getWillyWonkaResponse([
         { role: 'system', content: `The user's current system design problem is: ${state.userInput}` },
-        { role: 'system', content: `The current components are: ${JSON.stringify(state.components)}` },
+        { role: 'system', content: graphContext }, // Add graph context here
         ...state.chatbotMessages,
         { role: 'user', content: message },
       ]);
@@ -212,12 +287,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isChatbotResponding: false,
       }));
     }
-  }, [state.chatbotMessages, state.userInput, state.components, chatbotService]);
+  }, [state.chatbotMessages, state.userInput, state.components, state.canvasNodes, state.canvasEdges, chatbotService]);
 
   const onSendAdaMessage = useCallback(async (message: string) => {
+    const formattedMessage = formatUserInputForAda(state.userInput);
     setAppState((prevState) => ({
       ...prevState,
-      chatbotMessages: [...prevState.chatbotMessages, { role: 'assistant', content: message }],
+      chatbotMessages: [...prevState.chatbotMessages, { role: 'assistant', content: formattedMessage }],
       isChatbotResponding: true, // Set to true while Ada is "thinking"
     }));
 
@@ -239,7 +315,31 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isChatbotResponding: false,
       }));
     }
-  }, []);
+  }, [state.userInput]);
+
+  // Helper function to format user input for Ada's initial message
+  const formatUserInputForAda = (input: string) => {
+    try {
+      const parsedInput = JSON.parse(input);
+      let formattedMessage = "";
+      if (parsedInput.description) {
+        formattedMessage += `You're looking to build a ${parsedInput.description}.`;
+      }
+      if (parsedInput.goal) {
+        formattedMessage += ` Your main goal is to ${parsedInput.goal}.`;
+      }
+      if (parsedInput.features && parsedInput.features.length > 0) {
+        formattedMessage += ` Key features include ${parsedInput.features}.`;
+      }
+      if (parsedInput.techPreferences) {
+        formattedMessage += ` You have a preference for ${parsedInput.techPreferences}.`;
+      }
+      return formattedMessage.trim() || "You've provided some input for a system design.";
+    } catch (e) {
+      console.error("Failed to parse user input for Ada chat:", e);
+      return "You've provided some input for a system design.";
+    }
+  };
 
   const onPlaySimulation = useCallback(async () => {
     // Toggle the simulation state immediately
@@ -315,6 +415,8 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         costBreakdown: state.costBreakdown,
         exportedMarkdownContent: state.exportedMarkdownContent, // Expose generated markdown
         onGenerateExportMarkdown: onGenerateExportMarkdown, // Expose markdown generation function
+        TRAFFIC_THRESHOLDS: TRAFFIC_THRESHOLDS, // Expose traffic thresholds
+        onSetChatInput: setUserInput, // Expose setUserInput as onSetChatInput
       }}
     >
       {children}

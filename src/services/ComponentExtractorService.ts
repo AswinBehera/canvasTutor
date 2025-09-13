@@ -1,4 +1,4 @@
-import type { ComponentCard } from '@/types';
+import type { ComponentCard, ThresholdComponentsResponse } from '@/types';
 import type { Edge } from '@xyflow/react'; // Import Edge type
 
 export class ComponentExtractorService {
@@ -113,6 +113,110 @@ Example output format:
       console.error('Error extracting components from LLM:', error);
       // Return empty components in case of an error
       return { nodes: [], edges: [] };
+    }
+  }
+
+  async getThresholdComponents(thresholds: number[]): Promise<ThresholdComponentsResponse> {
+    const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || 'YOUR_OPENROUTER_API_KEY';
+    const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
+    const modelName = 'openai/gpt-oss-20b';
+
+    const prompt = `You are an AI assistant that suggests system architecture components based on traffic thresholds.
+For each of the following traffic thresholds, suggest additional components (nodes) and their connections (edges) that would be necessary to handle that traffic level.
+
+For each component (node), provide an 'id' (unique string), 'label' (short name), 'description' (1-line friendly explanation), 'techOptions' (an array of two strings: [managed_service_option, diy_option]), 'category' (e.g., 'frontend', 'backend', 'database', 'auth', 'storage', 'other', 'network', 'messaging'), 'baseMetrics' (an object with responsiveness, cost, and reliability, each a number between 0-100), and 'scalingFactors' (an object with traffic and instances, each a number between 0-1).
+For each connection (edge), provide an 'id' (unique string), 'source' (source node id), 'target' (target node id), and 'type' (always 'animated').
+
+Assume a base application already exists. Only provide components that would be *added* at each threshold, or modifications to existing ones (e.g., adding replicas).
+
+Return the output as a STRICT JSON object where keys are the traffic thresholds (as strings) and values are objects containing 'nodes' (array of ComponentCard) and 'edges' (array of Edge).
+
+Traffic Thresholds: ${thresholds.join(', ')}
+
+Example output format:
+{
+  "1000": {
+    "nodes": [
+      {
+        "id": "loadBalancer1",
+        "label": "Load Balancer",
+        "description": "Distributes incoming network traffic across multiple servers.",
+        "techOptions": ["AWS ELB", "Nginx"],
+        "category": "network",
+        "baseMetrics": { "responsiveness": 90, "cost": 10, "reliability": 99 },
+        "scalingFactors": { "traffic": 0.5, "instances": 0.5 }
+      }
+    ],
+    "edges": [
+      { "id": "e-lb-backend", "source": "loadBalancer1", "target": "backendService", "type": "animated" }
+    ]
+  },
+  "10000": {
+    "nodes": [
+      {
+        "id": "cdn1",
+        "label": "CDN",
+        "description": "Content Delivery Network for faster content delivery.",
+        "techOptions": ["Cloudflare", "AWS CloudFront"],
+        "category": "network",
+        "baseMetrics": { "responsiveness": 95, "cost": 15, "reliability": 98 },
+        "scalingFactors": { "traffic": 0.7, "instances": 0.3 }
+      }
+    ],
+    "edges": []
+  }
+}
+`;
+
+    try {
+      const response = await fetch(openRouterUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'http://localhost:5173',
+          'X-Title': 'CanvasTutor',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('OpenRouter API error:', errorData);
+        throw new Error(`OpenRouter API request failed with status ${response.status}: ${errorData.error.message || JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      const llmOutput = data.choices[0]?.message?.content;
+
+      if (!llmOutput) {
+        console.warn('LLM response for thresholds was empty or in an unexpected format.');
+        return {};
+      }
+
+      const cleanedLlmOutput = llmOutput.replace(/^```json\s*|\s*```$/g, '').trim();
+      const parsedOutput: ThresholdComponentsResponse = JSON.parse(cleanedLlmOutput);
+
+      // Basic validation
+      for (const threshold of thresholds) {
+        const key = String(threshold);
+        if (parsedOutput[key]) {
+          if (!Array.isArray(parsedOutput[key].nodes) || !Array.isArray(parsedOutput[key].edges)) {
+            console.warn(`Invalid format for threshold ${key}. Missing nodes or edges array.`);
+            parsedOutput[key] = { nodes: [], edges: [] };
+          }
+        }
+      }
+
+      return parsedOutput;
+
+    } catch (error) {
+      console.error('Error fetching threshold components from LLM:', error);
+      return {};
     }
   }
 }

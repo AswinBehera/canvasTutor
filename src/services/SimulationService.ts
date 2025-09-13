@@ -1,23 +1,10 @@
 import type { Node, Edge } from '@xyflow/react'; // Use type-only import
-import type { ControlsState, CustomNodeData, NodeMetrics, SimulationRules, SimulationResult, SimulationState } from '@/types';
+import type { ControlsState, CustomNodeData, NodeMetrics, SimulationResult, SimulationState } from '@/types';
 
-const SIMULATION_RULES: SimulationRules = {
+const SIMULATION_RULES = {
   trafficImpact: {
-    responsiveness: (traffic) => traffic / 10, // Penalty: higher traffic reduces responsiveness
-    cost: (traffic) => traffic * 0.01,
-  },
-  instanceScaling: {
-    responsiveness: (instances) => instances * 10,
-    cost: (instances) => instances * 20,
-  },
-  cacheEffects: {
-    off: { responsiveness: 1.0, cost: 1.0 },
-    small: { responsiveness: 1.2, cost: 1.1 },
-    large: { responsiveness: 1.5, cost: 1.3 },
-  },
-  vendorMultipliers: {
-    managed: { responsiveness: 1.1, cost: 1.4, reliability: 1.2 },
-    diy: { responsiveness: 0.9, cost: 0.7, reliability: 0.8 },
+    responsiveness: (traffic: number) => traffic / 10, // Penalty: higher traffic reduces responsiveness
+    cost: (traffic: number) => traffic * 0.01,
   },
 };
 
@@ -38,21 +25,6 @@ export class SimulationService {
     // Apply traffic impact
     responsiveness -= SIMULATION_RULES.trafficImpact.responsiveness(incomingTraffic);
     cost += SIMULATION_RULES.trafficImpact.cost(incomingTraffic);
-
-    // Apply instance scaling
-    responsiveness += SIMULATION_RULES.instanceScaling.responsiveness(controls.instances);
-    cost += SIMULATION_RULES.instanceScaling.cost(controls.instances);
-
-    // Apply cache effects
-    const cacheMultiplier = SIMULATION_RULES.cacheEffects[controls.cache];
-    responsiveness *= cacheMultiplier.responsiveness;
-    cost *= cacheMultiplier.cost;
-
-    // Apply vendor multipliers
-    const vendorMultiplier = SIMULATION_RULES.vendorMultipliers[controls.vendor];
-    responsiveness *= vendorMultiplier.responsiveness;
-    cost *= vendorMultiplier.cost;
-    reliability *= vendorMultiplier.reliability;
 
     return {
       responsiveness: Math.max(0, Math.min(100, responsiveness)),
@@ -137,40 +109,6 @@ export class SimulationService {
     breakdown.push(`Traffic Impact (Traffic: ${currentIncomingTraffic}):`);
     breakdown.push(`  Responsiveness -= ${trafficResponsivenessImpact.toFixed(2)} (now: ${responsiveness.toFixed(2)})`);
     breakdown.push(`  Cost += ${trafficCostImpact.toFixed(2)} (now: ${cost.toFixed(2)})`);
-
-    // Instance Scaling
-    const instanceResponsivenessMultiplier = SIMULATION_RULES.instanceScaling.responsiveness(currentControls.instances);
-    const instanceCostMultiplier = SIMULATION_RULES.instanceScaling.cost(currentControls.instances);
-    responsiveness += instanceResponsivenessMultiplier;
-    cost += instanceCostMultiplier;
-    formulas.push(`Responsiveness = Responsiveness + (Instances * 10)`);
-    formulas.push(`Cost = Cost + (Instances * 20)`);
-    breakdown.push(`Instance Scaling (Instances: ${currentControls.instances}):`);
-    breakdown.push(`  Responsiveness += ${instanceResponsivenessMultiplier.toFixed(2)} (now: ${responsiveness.toFixed(2)})`);
-    breakdown.push(`  Cost += ${instanceCostMultiplier.toFixed(2)} (now: ${cost.toFixed(2)})`);
-
-    // Cache Effects
-    const cacheMultiplier = SIMULATION_RULES.cacheEffects[currentControls.cache];
-    responsiveness *= cacheMultiplier.responsiveness;
-    cost *= cacheMultiplier.cost;
-    formulas.push(`Responsiveness = Responsiveness * Cache_Multiplier`);
-    formulas.push(`Cost = Cost * Cache_Multiplier`);
-    breakdown.push(`Cache Effects (Cache: ${currentControls.cache}):`);
-    breakdown.push(`  Responsiveness *= ${cacheMultiplier.responsiveness.toFixed(2)} (now: ${responsiveness.toFixed(2)})`);
-    breakdown.push(`  Cost *= ${cacheMultiplier.cost.toFixed(2)} (now: ${cost.toFixed(2)})`);
-
-    // Vendor Multipliers
-    const vendorMultiplier = SIMULATION_RULES.vendorMultipliers[currentControls.vendor];
-    responsiveness *= vendorMultiplier.responsiveness;
-    cost *= vendorMultiplier.cost;
-    reliability *= vendorMultiplier.reliability;
-    formulas.push(`Responsiveness = Responsiveness * Vendor_Responsiveness_Multiplier`);
-    formulas.push(`Cost = Cost * Vendor_Cost_Multiplier`);
-    formulas.push(`Reliability = Reliability * Vendor_Reliability_Multiplier`);
-    breakdown.push(`Vendor Multipliers (Vendor: ${currentControls.vendor}):`);
-    breakdown.push(`  Responsiveness *= ${vendorMultiplier.responsiveness.toFixed(2)} (now: ${responsiveness.toFixed(2)})`);
-    breakdown.push(`  Cost *= ${vendorMultiplier.cost.toFixed(2)} (now: ${cost.toFixed(2)})`);
-    breakdown.push(`  Reliability *= ${vendorMultiplier.reliability.toFixed(2)} (now: ${reliability.toFixed(2)})`);
 
     // Final clamping
     responsiveness = Math.max(0, Math.min(100, responsiveness));

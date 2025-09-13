@@ -28,7 +28,7 @@ import type { ComponentCard, Edge } from './types';
 
 function App() {
   const location = useLocation();
-      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, onSendAdaMessage, onGenerateExportMarkdown } = useAppState();
+      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, onSendAdaMessage, onGenerateExportMarkdown, TRAFFIC_THRESHOLDS } = useAppState();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false); // New state for ExportDialog
 
   const handleExportClick = () => {
@@ -205,6 +205,7 @@ function App() {
                   onPlaySimulation={onPlaySimulation}
                   isSimulating={state.isSimulating}
                   onExportClick={handleExportClick} // Pass the new handler
+                  trafficThresholds={TRAFFIC_THRESHOLDS} // Pass traffic thresholds
                 />
               </div>
               <ResizablePanelGroup direction="horizontal" className="flex-grow"> {/* Changed to horizontal */}

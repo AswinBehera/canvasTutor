@@ -18,6 +18,7 @@ export interface AppState {
   totalCost: number; // New
   costBreakdown: { [nodeId: string]: number }; // New
   exportedMarkdownContent: string; // New
+  thresholdComponents: ThresholdComponentsResponse; // New
 }
 
 export interface Session {
@@ -44,7 +45,7 @@ export interface ComponentCard {
   label: string;
   description: string;
   techOptions: [string, string]; // [managed, diy]
-  category: 'frontend' | 'backend' | 'database' | 'auth' | 'storage' | 'other';
+  category: 'frontend' | 'backend' | 'database' | 'auth' | 'storage' | 'other' | 'network' | 'messaging' | 'logging';
   baseMetrics?: { responsiveness: number; cost: number; reliability: number; };
   scalingFactors?: { traffic: number; instances: number; };
 }
@@ -70,7 +71,7 @@ export type CustomNodeData = {
   label: string;
   description: string;
   techChoice?: 'managed' | 'diy'; // Optional
-  category: 'frontend' | 'backend' | 'database' | 'auth' | 'storage' | 'other';
+  category: 'frontend' | 'backend' | 'database' | 'auth' | 'storage' | 'other' | 'network' | 'messaging' | 'logging';
   baseMetrics: { responsiveness: number; cost: number; reliability: number; };
   scalingFactors: { traffic: number; instances: number; };
   techOptions: [string, string]; // Add techOptions
@@ -85,15 +86,12 @@ export interface NodeMetrics {
 }
 
 export interface ControlsState {
-  traffic: number; // 0-1000
-  instances: number; // 1-10
-  cache: 'off' | 'small' | 'large';
-  vendor: 'managed' | 'diy';
+  traffic: number; // 0-1000000
 }
 
 export interface ControlsPanelProps {
   controls: ControlsState;
-  onControlChange: (key: keyof ControlsState, value: any) => void;
+  onControlChange: (key: keyof ControlsState, value: number) => void;
   onPlaySimulation: () => void;
   isSimulating: boolean;
 }
@@ -144,26 +142,10 @@ export interface ComponentTemplate {
     scalingFactors: { traffic: number; instances: number; };
 }
 
-export interface SimulationRules {
-  trafficImpact: {
-    responsiveness: (traffic: number) => number;
-    cost: (traffic: number) => number;
-  };
-  
-  instanceScaling: {
-    responsiveness: (instances: number) => number;
-    cost: (instances: number) => number;
-  };
-  
-  cacheEffects: {
-    off: { responsiveness: 1.0, cost: 1.0 };
-    small: { responsiveness: 1.2, cost: 1.1 };
-    large: { responsiveness: 1.5, cost: 1.3 };
-  };
-  
-  vendorMultipliers: {
-    managed: { responsiveness: 1.1, cost: 1.4, reliability: 1.2 };
-    diy: { responsiveness: 0.9, cost: 0.7, reliability: 0.8 };
+export interface ThresholdComponentsResponse {
+  [threshold: string]: {
+    nodes: ComponentCard[];
+    edges: Edge[];
   };
 }
 

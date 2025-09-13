@@ -24,22 +24,8 @@ export class CostEstimatorService {
 
       let nodeCost = baseMetrics.cost; // Base cost from component definition
 
-      // Apply instance scaling
-      nodeCost *= controls.instances;
-
-      // Apply cache effects (assuming cache adds to cost)
-      if (controls.cache === 'small') {
-        nodeCost *= 1.1; // 10% increase for small cache
-      } else if (controls.cache === 'large') {
-        nodeCost *= 1.3; // 30% increase for large cache
-      }
-
-      // Apply vendor multipliers
-      if (controls.vendor === 'managed') {
-        nodeCost *= 1.4; // Managed services are more expensive
-      } else if (controls.vendor === 'diy') {
-        nodeCost *= 0.7; // DIY is cheaper
-      }
+      // Simple cost scaling based on traffic (example: 0.01 per unit of traffic per node)
+      nodeCost += controls.traffic * 0.01;
 
       breakdown[data.label] = parseFloat(nodeCost.toFixed(2)); // Use node label for breakdown
       totalCost += nodeCost;

@@ -27,7 +27,7 @@ export function AnimatedEdge({
     <>
       <BaseEdge id={id} path={edgePath} />
       {Array.from({ length: numDots }).map((_, i) => (
-        <circle key={i} r="5" fill="red" className="nodrag nopan">
+        <circle key={i} r="5" fill="blue" className="nodrag nopan">
           <animateMotion
             dur="3s"
             repeatCount="indefinite"
