@@ -1,5 +1,7 @@
 import type { Node, Edge, NodeChange, EdgeChange, Connection, XYPosition } from '@xyflow/react';
 
+export type { Edge };
+
 export interface AppState {
   currentStep: 'input' | 'canvas' | 'simulation';
   userInput: string;
@@ -15,6 +17,7 @@ export interface AppState {
   isChatbotResponding: boolean; // New
   totalCost: number; // New
   costBreakdown: { [nodeId: string]: number }; // New
+  exportedMarkdownContent: string; // New
 }
 
 export interface Session {

@@ -17,8 +17,22 @@ export class ExportService {
     return JSON.stringify(exportData, null, 2);
   }
 
-  exportAsMarkdown(appState: AppState): string {
+  generateSpecMarkdown(appState: AppState): string {
     let markdown = `# System Design Specification
+
+## Overview
+
+This document outlines the design and implementation details of a system architecture, generated using CanvasTutor.
+
+## Tech Stack
+
+*   **Frontend:** React, TypeScript, Vite
+*   **UI Components:** shadcn/ui, Tailwind CSS
+*   **Canvas:** React Flow
+
+## Design Details
+
+This section provides a detailed breakdown of the system's components, their interactions, and simulation parameters.
 
 `;
     markdown += `## User Input
@@ -51,24 +65,9 @@ ${appState.userInput}
 
 `;
     markdown += `### Nodes\n\n`;
-    markdown += "```json\n";
-    markdown += `${JSON.stringify(appState.canvasNodes, null, 2)}\n`;
-    markdown += "```\n\n";
     markdown += `### Edges\n\n`;
-    markdown += "```json\n";
-    markdown += `${JSON.stringify(appState.canvasEdges, null, 2)}\n`;
-    markdown += "```\n\n";
-
-    markdown += `## Simulation Results
-
-`;
+    markdown += `## Simulation Results\n\n`;
     markdown += `### Controls\n\n`;
-    markdown += "```json\n";
-    markdown += `${JSON.stringify(appState.controls, null, 2)}\n`;
-    markdown += "```\n\n";
-    markdown += `### System Metrics
-
-`;
     markdown += `- **Total Cost**: ${appState.simulationState.systemMetrics.totalCost}
 `;
     markdown += `- **Average Response Time**: ${appState.simulationState.systemMetrics.averageResponseTime}
@@ -78,9 +77,7 @@ ${appState.userInput}
 `;
 
     if (appState.simulationState.recommendations && appState.simulationState.recommendations.length > 0) {
-      markdown += `### Recommendations
-
-`;
+      markdown += `### Recommendations\n\n`;
       appState.simulationState.recommendations.forEach((rec) => {
         markdown += `- ${rec}
 `;
@@ -88,9 +85,7 @@ ${appState.userInput}
     }
 
     markdown += `
-### Node Metrics
-
-`;
+### Node Metrics\n\n`;
     appState.simulationState.nodeMetrics.forEach((metrics, nodeId) => {
       markdown += `#### Node: ${nodeId}
 `;
@@ -105,13 +100,10 @@ ${appState.userInput}
 `;
     });
 
-    markdown += `## User Stories (Derived from Canvas Design)
-
-`;
-    // Generate user stories based on components and connections
+    markdown += `## User Stories (Derived from Canvas Design)\n\n`;
     if (appState.canvasNodes.length > 0) {
       appState.canvasNodes.forEach(node => {
-        const component = appState.components.find(c => c.id === node.id.split('-')[0]); // Assuming ID format
+        const component = appState.components.find(c => c.id === node.id.split('-')[0]); 
         if (component) {
           markdown += `- As a **user**, I want to **${component.description.toLowerCase()}** using the **${component.label}** component, so that I can achieve **${appState.userInput.split('/')[0] || 'my goal'}**.
 `;

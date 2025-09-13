@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { AppState, ComponentCard, SimulationState, Session } from '@/types';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import type { AppState, ComponentCard, SimulationState } from '@/types';
 import type { Node, Edge } from '@xyflow/react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 import { componentsToNodes, getLayoutedElements } from '@/lib/utils'; // Import getLayoutedElements
@@ -15,19 +15,18 @@ interface AppStateContextType {
   state: AppState;
   setAppState: React.Dispatch<React.SetStateAction<AppState>>;
   // Canvas related actions
-  onNodesChange: (changes: any) => void;
-  onEdgesChange: (changes: any) => void;
-  onConnect: (connection: any) => void;
+  onNodesChange: (changes: import('@xyflow/react').NodeChange[]) => void;
+  onEdgesChange: (changes: import('@xyflow/react').EdgeChange[]) => void;
+  onConnect: (connection: import('@xyflow/react').Connection) => void;
   onNodeDrop: (component: ComponentCard, position: { x: number; y: number }) => void;
   // Other actions
-  setComponents: (components: ComponentCard[], initialEdges?: Edge[], confidence?: number, suggestions?: string[]) => void;
+  setComponents: (components: ComponentCard[], initialEdges?: Edge[]) => void;
     setSimulationState: (simulationState: SimulationState) => void;
   setCurrentStep: (step: AppState['currentStep']) => void;
-  onControlChange: (key: keyof ControlsState, value: any) => void;
+  onControlChange: (key: keyof ControlsState, value: string | number) => void;
   onPlaySimulation: () => void;
   onToggleShowMath: (show: boolean) => void; // New
   getCalculationDetails: (node: Node<CustomNodeData>, incomingTraffic: number, controls: ControlsState) => { formulas: string[]; breakdown: string[]; }; // New
-  isSaving: boolean; // New
   chatbotMessages: { role: 'user' | 'assistant'; content: string }[]; // New
   isChatbotResponding: boolean; // New
   onSendChatbotMessage: (message: string) => Promise<void>; // New
@@ -35,12 +34,8 @@ interface AppStateContextType {
   setUserInput: (input: string) => void; // New
   totalCost: number; // New
   costBreakdown: { [nodeId: string]: number }; // New
-  sessions: Session[]; // New
-  currentSessionId: string | null; // New
-  saveCurrentSession: (sessionName: string) => void; // New
-  loadSession: (sessionId: string) => void; // New
-  createNewSession: () => void; // New
-  deleteSession: (sessionId: string) => void; // New
+  exportedMarkdownContent: string; // New: Stores the generated markdown for export
+  onGenerateExportMarkdown: () => void; // New: Function to trigger markdown generation
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -81,16 +76,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isChatbotResponding: false,
       totalCost: 0,
       costBreakdown: {},
-      sessions: [],
-      currentSessionId: null,
+      exportedMarkdownContent: '',
     };
   });
 
-  const simulationService = new SimulationService();
-  const costEstimatorService = new CostEstimatorService();
+  const simulationService = useMemo(() => new SimulationService(), []);
+  const costEstimatorService = useMemo(() => new CostEstimatorService(), []);
 
   const onNodesChange = useCallback(
-    (changes: any) => {
+    (changes: import('@xyflow/react').NodeChange[]) => {
       setAppState((prevState) => ({
         ...prevState,
         canvasNodes: applyNodeChanges(changes, prevState.canvasNodes) as Node<CustomNodeData>[],
@@ -100,7 +94,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const onEdgesChange = useCallback(
-    (changes: any) => {
+    (changes: import('@xyflow/react').EdgeChange[]) => {
       setAppState((prevState) => ({
         ...prevState,
         canvasEdges: applyEdgeChanges(changes, prevState.canvasEdges) as Edge[],
@@ -110,7 +104,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const onConnect = useCallback(
-    (connection: any) => {
+    (connection: import('@xyflow/react').Connection) => {
       setAppState((prevState) => ({
         ...prevState,
         canvasEdges: addEdge({ ...connection, type: 'animated' }, prevState.canvasEdges),
@@ -172,7 +166,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const onControlChange = useCallback(
-    (key: keyof ControlsState, value: any) => {
+    (key: keyof ControlsState, value: string | number) => {
       setAppState((prevState) => ({
         ...prevState,
         controls: {
@@ -188,7 +182,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAppState((prevState) => ({ ...prevState, showMath: show }));
   }, []);
 
-  const chatbotService = new ChatbotService();
+  const chatbotService = useMemo(() => new ChatbotService(), []);
 
   const onSendChatbotMessage = useCallback(async (message: string) => {
     setAppState((prevState) => ({
@@ -218,7 +212,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isChatbotResponding: false,
       }));
     }
-  }, [state.chatbotMessages, state.userInput, state.components]);
+  }, [state.chatbotMessages, state.userInput, state.components, chatbotService]);
 
   const onSendAdaMessage = useCallback(async (message: string) => {
     setAppState((prevState) => ({
@@ -248,18 +242,17 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const onPlaySimulation = useCallback(async () => {
+    // Toggle the simulation state immediately
     setAppState((prevState) => {
-      const newIsSimulating = !prevState.isSimulating; // Toggle the state
-      if (newIsSimulating) {
-        // Start simulation
-        return { ...prevState, isSimulating: true };
-      } else {
-        // Stop simulation
-        return { ...prevState, isSimulating: false };
-      }
+      const newIsSimulating = !prevState.isSimulating;
+      return { ...prevState, isSimulating: newIsSimulating };
     });
 
-    if (!state.isSimulating) { // Only run simulation logic if starting
+    // Use a local variable to capture the *intended* new state for simulation logic
+    // This is crucial because state updates are asynchronous
+    const willSimulate = !state.isSimulating; // This captures the state *before* the setAppState above
+
+    if (willSimulate) { // Only run simulation logic if we intend to start simulating
       try {
         const simulationResult = await simulationService.calculateMetrics(
           state.canvasNodes as Node<CustomNodeData>[],
@@ -285,120 +278,17 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Optionally, set an error state or show a user-friendly message
       }
     }
-  }, [state.canvasNodes, state.canvasEdges, state.controls, state.isSimulating]); // Added state.isSimulating to dependencies
+  }, [state.canvasNodes, state.canvasEdges, state.controls, state.isSimulating, costEstimatorService, simulationService]); // Added state.isSimulating to dependencies
 
-  const saveCurrentSession = useCallback((sessionName: string) => {
-    setAppState((prevState) => {
-      const newSession: Session = {
-        id: prevState.currentSessionId || Date.now().toString(),
-        name: sessionName,
-        timestamp: Date.now(),
-        state: prevState, // Save the entire current state
-      };
+  const exportService = useMemo(() => new ExportService(), []);
 
-      const existingSessionIndex = prevState.sessions.findIndex(s => s.id === newSession.id);
-      let updatedSessions;
-      if (existingSessionIndex > -1) {
-        updatedSessions = prevState.sessions.map((s, index) =>
-          index === existingSessionIndex ? newSession : s
-        );
-      } else {
-        updatedSessions = [...prevState.sessions, newSession];
-      }
-
-      localStorage.setItem('canvasTutorSessions', JSON.stringify(updatedSessions));
-
-      return {
-        ...prevState,
-        sessions: updatedSessions,
-        currentSessionId: newSession.id,
-      };
-    });
-  }, []);
-
-  const loadSession = useCallback((sessionId: string) => {
-    setAppState((prevState) => {
-      const sessionToLoad = prevState.sessions.find(s => s.id === sessionId);
-      if (sessionToLoad) {
-        // When loading, we replace the entire state with the saved state
-        // Ensure React Flow nodes/edges are correctly re-initialized if needed
-        return {
-          ...sessionToLoad.state,
-          currentSessionId: sessionToLoad.id,
-          sessions: prevState.sessions, // Keep the list of sessions intact
-        };
-      }
-      return prevState;
-    });
-  }, []);
-
-  const createNewSession = useCallback(() => {
+  const onGenerateExportMarkdown = useCallback(() => {
+    const markdown = exportService.generateSpecMarkdown(state);
     setAppState((prevState) => ({
-      ...initialAppState, // Reset to a clean initial state
-      sessions: prevState.sessions, // Keep existing sessions
-      currentSessionId: null, // No current session until saved
+      ...prevState,
+      exportedMarkdownContent: markdown,
     }));
-  }, []);
-
-  const deleteSession = useCallback((sessionId: string) => {
-    setAppState((prevState) => {
-      const updatedSessions = prevState.sessions.filter(s => s.id !== sessionId);
-      localStorage.setItem('canvasTutorSessions', JSON.stringify(updatedSessions));
-      return {
-        ...prevState,
-        sessions: updatedSessions,
-        currentSessionId: prevState.currentSessionId === sessionId ? null : prevState.currentSessionId, // Clear if current session deleted
-      };
-    });
-  }, []);
-
-  // Load all sessions from localStorage on initial render
-  useEffect(() => {
-    const savedSessions = localStorage.getItem('canvasTutorSessions');
-    if (savedSessions) {
-      const parsedSessions: Session[] = JSON.parse(savedSessions);
-      setAppState((prevState) => ({
-        ...prevState,
-        sessions: parsedSessions,
-        // Optionally load the last active session or keep currentSessionId null
-      }));
-    }
-  }, []);
-
-  // Save current session state to localStorage whenever relevant parts of the state change
-  useEffect(() => {
-    if (state.currentSessionId) {
-      const currentSessionData: Session = {
-        id: state.currentSessionId,
-        name: state.sessions.find(s => s.id === state.currentSessionId)?.name || 'Unnamed Session',
-        timestamp: Date.now(),
-        state: state, // Save the entire current state
-      };
-      const updatedSessions = state.sessions.map(s =>
-        s.id === state.currentSessionId ? currentSessionData : s
-      );
-      localStorage.setItem('canvasTutorSessions', JSON.stringify(updatedSessions));
-    }
-  }, [state.currentSessionId, state.userInput, state.components, state.canvasNodes, state.canvasEdges, state.simulationState, state.controls, state.chatbotMessages, state.totalCost, state.costBreakdown]);
-
-  // Canvas auto-save hook (modified to use session saving)
-  const exportService = new ExportService();
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setIsSaving(true);
-    const handler = setTimeout(() => {
-      if (state.currentSessionId) {
-        saveCurrentSession(state.sessions.find(s => s.id === state.currentSessionId)?.name || 'Unnamed Session');
-      } else {
-        // If no current session, auto-save to a temporary session or prompt to save
-        console.log('No current session to auto-save to.');
-      }
-      setIsSaving(false);
-    }, 1000); // Debounce for 1 second
-
-    return () => clearTimeout(handler);
-  }, [state.canvasNodes, state.canvasEdges, state.userInput, state.components, state.simulationState, state.currentSessionId, saveCurrentSession]);
+  }, [state, exportService]); // Depend on state to ensure latest data is used
 
   return (
     <AppStateContext.Provider
@@ -416,18 +306,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         onPlaySimulation,
         onToggleShowMath,
         getCalculationDetails: simulationService.getCalculationDetails,
-        isSaving: isSaving,
         chatbotMessages: state.chatbotMessages,
         isChatbotResponding: state.isChatbotResponding,
                 onSendChatbotMessage: onSendChatbotMessage, // New
         onSendAdaMessage: onSendAdaMessage, // New
         setUserInput: setUserInput, // New
-        sessions: state.sessions,
-        currentSessionId: state.currentSessionId,
-        saveCurrentSession: saveCurrentSession,
-        loadSession: loadSession,
-        createNewSession: createNewSession,
-        deleteSession: deleteSession,
+        totalCost: state.totalCost,
+        costBreakdown: state.costBreakdown,
+        exportedMarkdownContent: state.exportedMarkdownContent, // Expose generated markdown
+        onGenerateExportMarkdown: onGenerateExportMarkdown, // Expose markdown generation function
       }}
     >
       {children}

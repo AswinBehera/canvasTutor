@@ -29,7 +29,7 @@ export function ExportPanel({ appState }: ExportPanelProps) {
   const handleExport = () => {
     const jsonString = exporter.exportAsJson(appState);
     setJsonContent(jsonString);
-    const markdownString = exporter.exportAsMarkdown(appState);
+    const markdownString = exporter.generateSpecMarkdown(appState);
     setMarkdownContent(markdownString);
   };
 

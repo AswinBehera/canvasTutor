@@ -5,19 +5,16 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input"; // Import Input
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button"; // Import Button
-import { Toggle } from "@/components/ui/toggle"; // Import Toggle
 import { Loader2 } from "lucide-react"; // Import Loader2
 import { Link } from "react-router-dom";
 import type { ControlsState } from "@/types";
 
 interface ControlsPanelProps {
     controls: ControlsState;
-    onControlChange: (key: keyof ControlsState, value: any) => void;
+    onControlChange: (key: keyof ControlsState, value: string | number) => void;
     onPlaySimulation: () => void;
     isSimulating: boolean;
-    onToggleShowMath: (show: boolean) => void; // New prop
-    showMath: boolean; // New prop
-    onSaveSession: () => void; // New prop
+    onExportClick: () => void; // New prop for Export button
 }
 
 export const ControlsPanel = React.memo(function ControlsPanel({
@@ -25,9 +22,7 @@ export const ControlsPanel = React.memo(function ControlsPanel({
     onControlChange,
     onPlaySimulation,
     isSimulating,
-    onToggleShowMath,
-    showMath,
-    onSaveSession,
+    onExportClick, // Destructure new prop
 }: ControlsPanelProps) {
     return (
         <div className='flex items-center justify-between w-full m-4'>
@@ -63,10 +58,7 @@ export const ControlsPanel = React.memo(function ControlsPanel({
                 <Card className='p-2 h-24'>
                     <CardHeader className='p-0 pt-2'>
                         <CardTitle className='text-base'>
-                            <Label
-                                htmlFor='instances'
-                                className='whitespace-nowrap'
-                            >
+                            <Label className='whitespace-nowrap'>
                                 Instances
                             </Label>
                         </CardTitle>
@@ -160,11 +152,12 @@ export const ControlsPanel = React.memo(function ControlsPanel({
                     )}
                     {isSimulating ? "Simulating..." : "Simulate"}
                 </Button>
+                {/* Removed Save Button */}
                 <Button
-                    onClick={onSaveSession}
+                    onClick={onExportClick} // New Export button
                     className='whitespace-nowrap'
                 >
-                    Save
+                    Export
                 </Button>
                 {/*
         <Card className="p-2 h-24">

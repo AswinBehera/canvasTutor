@@ -55,6 +55,20 @@ export function Chatbot({ onSendMessage, messages = [], isResponding }: ChatbotP
         )}
         <div ref={messagesEndRef} />
       </ScrollArea>
+      <div className="mb-2 flex flex-wrap gap-2"> {/* Suggestion cue cards */}
+        {["Explain Cost", "Optimize Traffic", "Suggest Cache"].map((suggestion, index) => (
+          <Button
+            key={index}
+            variant="outline"
+            size="sm"
+            onClick={() => setInput(suggestion)}
+            disabled={isResponding}
+            className="text-xs px-2 py-1 h-auto"
+          >
+            {suggestion}
+          </Button>
+        ))}
+      </div>
       <div className="flex">
         <Input
           type="text"

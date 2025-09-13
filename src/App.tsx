@@ -18,32 +18,60 @@ import { useEffect, useState } from 'react';
 import { useAppState } from './context/AppStateContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ControlsPanel } from './components/ControlsPanel';
-import { ExportPanel } from './components/ExportPanel';
 
 import { CostDisplay } from './components/CostDisplay';
-import { SaveSessionDialog } from './components/SaveSessionDialog';
-import { SessionManager } from './components/SessionManager';
 import InitialChatbotMessage from './components/InitialChatbotMessage'; // New import
+import ExportDialog from './components/ExportDialog'; // New import
+import { ComponentExtractorService } from './services/ComponentExtractorService'; // New import
+import type { ComponentCard, Edge } from './types';
 
 
 function App() {
   const location = useLocation();
-      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, saveCurrentSession, onSendAdaMessage } = useAppState();
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+      const { state, onNodesChange, onEdgesChange, onConnect, onNodeDrop, setComponents, onControlChange, onPlaySimulation, onToggleShowMath, onSendChatbotMessage, onSendAdaMessage, onGenerateExportMarkdown } = useAppState();
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false); // New state for ExportDialog
 
-  // This useEffect is now responsible for setting the components in the global state
-  // when navigating to the canvas page with components in location.state.
+  const handleExportClick = () => {
+    setIsExportDialogOpen(true);
+    onGenerateExportMarkdown(); // Generate markdown when export is clicked
+  };
+
+  const handleDownloadMarkdown = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
-    type CanvasLocationState = {
-      components?: any[];
-      initialEdges?: any[];
-    };
+    const locState = location.state as { components?: ComponentCard[]; initialEdges?: Edge[] };
+    console.log('useEffect triggered. location.pathname:', location.pathname, 'location.state:', location.state, 'state.components.length:', state.components.length);
 
-    const locState = location.state as CanvasLocationState;
-    if (location.pathname === '/canvas' && location.state && locState.components) {
-      setComponents(locState.components, locState.initialEdges || []);
+    if (location.pathname === '/canvas') {
+      if (locState && locState.components) {
+        console.log('Loading components from location.state:', locState.components);
+        setComponents(locState.components, locState.initialEdges || []);
+      } else if (state.components.length === 0) { // If no components from location.state and current state is empty
+        console.log('Generating default components...');
+        const extractorService = new ComponentExtractorService();
+        const defaultInput = "a simple web application"; // Default input for initial generation
+        extractorService.extractComponents(defaultInput).then(({ nodes, edges }) => {
+          console.log('Default components generated:', nodes, edges);
+          setComponents(nodes, edges);
+          // Optionally, send an initial chatbot message related to the default graph
+          onSendAdaMessage(`Welcome! Here's a default graph for "${defaultInput}". Feel free to modify it or ask me questions!`);
+        }).catch(error => {
+          console.error("Failed to generate default components:", error);
+          onSendAdaMessage("I'm sorry, I couldn't generate a default graph at this moment. Please try providing an input on the 'Get Started' page.");
+        });
+      }
     }
-  }, [location.pathname, location.state?.components, location.state?.initialEdges, setComponents]);
+  }, [location.pathname, location.state, setComponents, state.components.length, onSendAdaMessage]); // Added state.components.length and onSendAdaMessage to dependencies
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased text-foreground">
@@ -59,7 +87,6 @@ function App() {
           </nav>
           <div className="space-x-4">
             <Link to="/get-started"><Button className="text-sm font-medium">Get Started</Button></Link>
-            <Link to="/sessions"><Button className="text-sm font-medium">Sessions</Button></Link>
           </div>
         </header>
       )}
@@ -166,7 +193,6 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         
         <Route path="/get-started" element={<InputPage />} />
-        <Route path="/sessions" element={<SessionManager />} />
         <Route path="/canvas" element={
           <>
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -178,25 +204,31 @@ function App() {
                   onControlChange={onControlChange}
                   onPlaySimulation={onPlaySimulation}
                   isSimulating={state.isSimulating}
-                  onToggleShowMath={onToggleShowMath}
-                  showMath={state.showMath}
-                  onSaveSession={() => setIsSaveDialogOpen(true)}
+                  onExportClick={handleExportClick} // Pass the new handler
                 />
               </div>
               <ResizablePanelGroup direction="horizontal" className="flex-grow"> {/* Changed to horizontal */}
                 <ResizablePanel defaultSize={30} minSize={20}> {/* Left Panel */}
                   <ResizablePanelGroup direction="vertical" className="h-full border-r">
-                    <ResizablePanel defaultSize={40}> {/* CostDisplay takes 40% */}                      <div className="flex h-full items-center justify-center flex-col">                        <CostDisplay totalCost={state.totalCost} breakdown={state.costBreakdown} />                      </div>                    </ResizablePanel>                    <ResizableHandle />                    <ResizablePanel defaultSize={60}> {/* Chatbot takes 60% */}                      <div className="flex h-full items-center justify-center p-6 flex-col">                        <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada\'s Insights</h3>                        <div className="flex-grow overflow-y-auto w-full">                          <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />                        </div>                      </div>                    </ResizablePanel>
+                    <ResizablePanel defaultSize={40}> {/* CostDisplay takes 40% */}
+                      <div className="flex h-full items-center justify-center flex-col">
+                        <CostDisplay totalCost={state.totalCost} breakdown={state.costBreakdown} />
+                      </div>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={60}> {/* Chatbot takes 60% */}
+                      <div className="flex h-full items-center justify-center p-6 flex-col">
+                        <h3 className='p-2 mb-2 ml-1 font-semibold'>Ada\'s Insights</h3>
+                        <div className="flex-grow overflow-y-auto w-full">
+                          <Chatbot onSendMessage={onSendChatbotMessage} messages={state.chatbotMessages || []} isResponding={state.isChatbotResponding} />
+                        </div>
+                      </div>
+                    </ResizablePanel>
                   </ResizablePanelGroup>
                 </ResizablePanel>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={70}> {/* Canvas Area */}
                   <div style={{ flexGrow: 1, height: '100%' }}> {/* Removed flexGrow: 1 from here, added to parent */}
-                    {state.isSaving && (
-                      <div className="absolute top-2 right-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-md z-50">
-                        Saving...
-                      </div>
-                    )}
                     <ErrorBoundary errorType="CanvasError" fallback={<div>Error rendering canvas.</div>}>
                         <ReactFlowProvider>
                           <Canvas nodes={state.canvasNodes} edges={state.canvasEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeDrop={onNodeDrop} showMath={state.showMath} />
@@ -206,18 +238,16 @@ function App() {
                 </ResizablePanel>
               </ResizablePanelGroup>
             </div>
-            <SaveSessionDialog
-              isOpen={isSaveDialogOpen}
-              onClose={() => setIsSaveDialogOpen(false)}
-              onSave={(sessionName) => {
-                  saveCurrentSession(sessionName);
-                  setIsSaveDialogOpen(false);
-              }}
-            />
             <InitialChatbotMessage onSendAdaMessage={onSendAdaMessage} userInput={state.userInput} /> {/* New component for initial message */}
-          </>
-        } />
-      </Routes>
+            {isExportDialogOpen && (
+              <ExportDialog
+                isOpen={isExportDialogOpen}
+                onClose={() => setIsExportDialogOpen(false)}
+                markdownContent={state.exportedMarkdownContent}
+                onDownload={handleDownloadMarkdown}
+              />
+            )}
+          </>        } />      </Routes>
 
       {/* Footer (only for non-canvas pages) */}
       {location.pathname !== '/canvas' && (

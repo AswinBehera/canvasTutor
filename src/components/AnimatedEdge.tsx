@@ -21,7 +21,7 @@ export function AnimatedEdge({
     targetPosition,
   });
 
-  const numDots = data?.traffic ? Math.min(20, Math.ceil(data.traffic / 50)) : 0;
+  const numDots = data?.traffic ? Math.min(20, Math.ceil(Number(data.traffic) / 50)) : 0;
 
   return (
     <>

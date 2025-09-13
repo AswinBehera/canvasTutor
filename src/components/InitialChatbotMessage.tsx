@@ -10,7 +10,7 @@ const InitialChatbotMessage: React.FC<InitialChatbotMessageProps> = ({ onSendAda
 
   useEffect(() => {
     if (!hasSentMessage.current) { // Only send if not already sent
-      const message = `Hello! I'm Ada, your AI assistant. Based on your input for "${userInput}", this is your canvas where you can design and simulate system architectures. You can drag and drop components, connect them, and adjust controls to see their impact. Feel free to ask me any questions about your design or the current graph!`;
+      const message = `Hello! I'm Ada, your AI assistant. Based on your input for "${userInput}", this is your canvas where you can design and simulate system architectures. You can adjust controls to see their impact. I am here to help you!`;
       onSendAdaMessage(message); // Changed to onSendAdaMessage
       hasSentMessage.current = true; // Mark as sent
     }

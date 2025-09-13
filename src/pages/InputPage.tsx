@@ -18,12 +18,10 @@ const InputPage: React.FC = () => {
 
     try {
       const extractor = new ComponentExtractorService();
-      const { nodes, edges, confidence, suggestions } = await extractor.extractComponents(input); // Destructure nodes, edges, confidence, and suggestions
+      const { nodes, edges } = await extractor.extractComponents(input); // Destructure nodes, edges, confidence, and suggestions
       console.log('Extracted Nodes:', nodes);
       console.log('Extracted Edges:', edges);
-      console.log('Confidence:', confidence);
-      console.log('Suggestions:', suggestions);
-      setComponents(nodes, edges, confidence, suggestions); // Pass all to AppStateContext
+      setComponents(nodes, edges); // Pass all to AppStateContext
       setCurrentStep('canvas'); // Update global step
       navigate('/canvas'); // Navigate to canvas page (state is already set in AppStateContext)
     } catch (error) {
